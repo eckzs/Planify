@@ -11,6 +11,7 @@
 local.properties
 **/local.properties
 gradle.properties.local
+google-services.json
 
 # IntelliJ / Android Studio
 /.idea

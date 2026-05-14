@@ -1,10 +1,14 @@
 package com.app.planify
 
+import android.widget.Toast
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -13,12 +17,13 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.app.planify.components.PlBottomBar
 import com.app.planify.constants.Routes
+import com.app.planify.logic.utils.EmailLinkAuthHandler
+import com.app.planify.logic.utils.EmailLinkState
 import com.app.planify.screens.auth.AuthScreen
 import com.app.planify.screens.auth.OnboardingScreen
-import com.app.planify.screens.auth.OtpScreen
 import com.app.planify.screens.home.HomeScreen
-// TODO: uncomment when feat/pomodoro is merged
-// import com.app.planify.screens.pomodoro.PomodoroScreen
+import com.app.planify.screens.tasks.AddTaskScreen
+import com.app.planify.screens.pomodoro.PomodoroScreen
 // TODO: uncomment when feat/profile is merged
 // import com.app.planify.screens.profile.ProfileScreen
 import com.app.planify.screens.tasks.TasksScreen
@@ -26,12 +31,33 @@ import com.app.planify.screens.tasks.TasksScreen
 @Composable
 fun AppNavigation() {
     val navController = rememberNavController()
+    val context = LocalContext.current
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
+    val emailLinkState by EmailLinkAuthHandler.state.collectAsState()
 
-    // TODO: add Routes.POMODORO and Routes.PROFILE when their features are merged
-    val bottomBarRoutes = setOf(Routes.HOME, Routes.TASKS)
+    // TODO: add Routes.PROFILE when its feature is merged
+    val bottomBarRoutes = setOf(Routes.HOME, Routes.TASKS, Routes.POMODORO)
     val showBottomBar = currentRoute in bottomBarRoutes
+
+    LaunchedEffect(emailLinkState) {
+        when (val state = emailLinkState) {
+            is EmailLinkState.Success -> {
+                val nextRoute = if (state.isNewUser) Routes.ONBOARDING else Routes.HOME
+                navController.navigate(nextRoute) {
+                    popUpTo(Routes.AUTH) { inclusive = true }
+                }
+                EmailLinkAuthHandler.clearState()
+            }
+
+            is EmailLinkState.Error -> {
+                Toast.makeText(context, state.message, Toast.LENGTH_LONG).show()
+                EmailLinkAuthHandler.clearState()
+            }
+
+            null -> Unit
+        }
+    }
 
     Scaffold(
         bottomBar = {
@@ -48,30 +74,11 @@ fun AppNavigation() {
 
             composable(Routes.AUTH) {
                 AuthScreen(
-                    onNavigateToOtp = { email -> navController.navigate(Routes.otp(email)) }
-                )
-            }
-
-            composable(
-                route = Routes.OTP,
-                arguments = listOf(navArgument("email") { type = NavType.StringType })
-            ) { backStack ->
-                val email = android.net.Uri.decode(
-                    backStack.arguments?.getString("email") ?: ""
-                )
-                OtpScreen(
-                    email = email,
-                    onNavigateToOnboarding = {
-                        navController.navigate(Routes.ONBOARDING) {
-                            popUpTo(Routes.AUTH) { inclusive = true }
-                        }
-                    },
                     onNavigateToHome = {
                         navController.navigate(Routes.HOME) {
                             popUpTo(Routes.AUTH) { inclusive = true }
                         }
-                    },
-                    onNavigateBack = { navController.popBackStack() }
+                    }
                 )
             }
 
@@ -98,13 +105,41 @@ fun AppNavigation() {
             composable(Routes.TASKS) {
                 TasksScreen(
                     onNavigateToAdd = {
-                        // TODO: navController.navigate(Routes.ADD_TASK)
+                        navController.navigate(Routes.ADD_TASK)
+                    },
+                    onNavigateToEdit = { taskId ->
+                        navController.navigate(Routes.taskDetail(taskId))
                     }
                 )
             }
 
-                // TODO: temporary — enable when feat/pomodoro is merged
-            // composable(Routes.POMODORO) { PomodoroScreen() }
+            composable(Routes.ADD_TASK) {
+                AddTaskScreen(
+                    onNavigateBack = {
+                        navController.popBackStack()
+                    }
+                )
+            }
+
+            composable(
+                route = Routes.TASK_DETAIL,
+                arguments = listOf(navArgument("taskId") { type = NavType.StringType })
+            ) { backStack ->
+                val taskId = android.net.Uri.decode(
+                    backStack.arguments?.getString("taskId") ?: ""
+                )
+
+                AddTaskScreen(
+                    taskId = taskId,
+                    onNavigateBack = {
+                        navController.popBackStack()
+                    }
+                )
+            }
+
+            composable(Routes.POMODORO) {
+                PomodoroScreen()
+            }
 
             // TODO: temporary — enable when feat/profile is merged
             // composable(Routes.PROFILE) { ProfileScreen() }

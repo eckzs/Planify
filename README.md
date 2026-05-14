@@ -18,50 +18,51 @@ academic life through one unified experience.
 Core ideas of the product include:
 
 -   Personal planner for tasks and schedules
--   Visualization of activities assigned by teachers
 -   Study tools inspired by spaced repetition
 -   Focus techniques such as Pomodoro
 -   Centralized academic workflow
-
-This repository contains the Android applications for the ecosystem.
-
-## Ecosystem
-
-| Project        | Description                     |
-|----------------|---------------------------------|
-| planify        | Android app for students        |
-| teachly        | Android app for teachers        |
-| api-plnf-tchl  | Shared backend                  |
-
-Backend repository: https://github.com/ericklopezdev/api-plnf-tchl
-
-Teacher platform (Teachly): https://github.com/brayanalaya/teachly
 
 
 ## Running Locally
 
 ### Requirements
 
--   Android SDK (API 34)
 -   Java 17+
--   Gradle
+-   Android SDK (API 36)
+-   USB debugging enabled on your phone
 
-### Steps
+### First time setup (Linux)
+
+If you don't have Android Studio, the setup script installs the SDK,
+accepts licenses and configures environment variables automatically:
 
 ``` bash
-# Clone repository
-git clone https://github.com/your-org/planify-student.git
-cd planify
-
-# Create local.properties
-echo "sdk.dir=$ANDROID_HOME" >> local.properties
-
-# Build debug APK
-./gradlew assembleDebug
-
-# Install on device
-adb install app/build/outputs/apk/debug/app-debug.apk
+./.scripts/setup-android-linux.sh
 ```
+
+Then add your environment variables (see section below) and connect your phone.
+
+### Daily workflow
+
+Build and install the debug APK on your connected device:
+
+``` bash
+./.scripts/reload-app.sh
+```
+
+The script detects the connected device, builds the APK and installs it.
+If there are multiple devices it asks you which one to use.
+If install fails due to a signature mismatch it uninstalls and retries automatically.
+
+### Troubleshooting
+
+If Gradle freezes or the device stops being detected:
+
+``` bash
+./.scripts/clean-processes.sh
+```
+
+This stops Gradle daemons, the Kotlin compiler daemon and restarts the ADB server.
 
 ## Environment Variables
 

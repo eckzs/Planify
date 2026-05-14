@@ -18,22 +18,39 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.credentials.CredentialManager
+import androidx.credentials.CustomCredential
+import androidx.credentials.GetCredentialRequest
+import androidx.credentials.exceptions.GetCredentialException
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.app.planify.R
 import com.app.planify.components.PlButton
 import com.app.planify.components.PlInput
+import com.app.planify.logic.utils.EmailLinkPrefs
 import com.app.planify.ui.theme.PlColors
 import com.app.planify.ui.theme.PlSpacing
 import com.app.planify.ui.theme.PlTypography
+import com.google.android.libraries.identity.googleid.GetGoogleIdOption
+import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+import kotlinx.coroutines.launch
 
 @Composable
 fun AuthScreen(
     viewModel: AuthViewModel = viewModel(),
-    onNavigateToOtp: (String) -> Unit
+    onNavigateToHome: () -> Unit
 ) {
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    val credentialManager = CredentialManager.create(context)
+    val serverClientId = stringResource(R.string.default_web_client_id)
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -46,9 +63,44 @@ fun AuthScreen(
 
         Spacer(Modifier.height(PlSpacing.xl))
 
-        // TODO: implementar Google Sign-In con GoogleSignInClient
         OutlinedButton(
-            onClick = { /* TODO: Google Sign-In */ },
+            onClick = {
+                coroutineScope.launch {
+                    try {
+                        val googleIdOption = GetGoogleIdOption.Builder()
+                            .setFilterByAuthorizedAccounts(false)
+                            .setServerClientId(serverClientId)
+                            .build()
+
+                        val request = GetCredentialRequest.Builder()
+                            .addCredentialOption(googleIdOption)
+                            .build()
+
+                        val result = credentialManager.getCredential(
+                            context = context,
+                            request = request
+                        )
+
+                        val credential = result.credential
+                        if (
+                            credential is CustomCredential &&
+                            credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
+                        ) {
+                            val googleCredential =
+                                GoogleIdTokenCredential.createFrom(credential.data)
+                            viewModel.signInWithGoogle(
+                                idToken = googleCredential.idToken,
+                                onSuccess = onNavigateToHome
+                            )
+                        } else {
+                            viewModel.showGoogleError()
+                        }
+                    } catch (e: GetCredentialException) {
+                        viewModel.showGoogleError()
+                    }
+                }
+            },
+            enabled = !viewModel.isLoading,
             modifier = Modifier.fillMaxWidth().height(52.dp),
             shape = RoundedCornerShape(12.dp),
             border = BorderStroke(1.dp, PlColors.TextHint)
@@ -70,15 +122,41 @@ fun AuthScreen(
         Spacer(Modifier.height(PlSpacing.md))
 
         PlButton(
-            text = "Continuar",
-            enabled = viewModel.email.isNotBlank(),
-            onClick = { viewModel.continuar(onNavigateToOtp) }
+            text = "Enviar link de ingreso",
+            enabled = viewModel.email.isNotBlank() && !viewModel.isLoading,
+            onClick = {
+                viewModel.sendEmailLink { email ->
+                    EmailLinkPrefs.saveEmail(context, email)
+                }
+            }
         )
 
         Spacer(Modifier.height(PlSpacing.sm))
 
+        viewModel.errorMessage?.let { message ->
+            Text(
+                text = message,
+                style = PlTypography.bodyMedium,
+                color = PlColors.Error,
+                textAlign = TextAlign.Center
+            )
+
+            Spacer(Modifier.height(PlSpacing.sm))
+        }
+
+        viewModel.successMessage?.let { message ->
+            Text(
+                text = message,
+                style = PlTypography.bodyMedium,
+                color = PlColors.Primary,
+                textAlign = TextAlign.Center
+            )
+
+            Spacer(Modifier.height(PlSpacing.sm))
+        }
+
         Text(
-            text = "Ingresa tu email, detectamos si es cuenta nueva",
+            text = "Ingresa tu email se te enviará un link de acceso",
             style = PlTypography.bodyMedium,
             color = PlColors.TextHint,
             textAlign = TextAlign.Center
