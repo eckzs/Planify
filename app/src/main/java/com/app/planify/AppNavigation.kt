@@ -23,8 +23,7 @@ import com.app.planify.screens.auth.AuthScreen
 import com.app.planify.screens.auth.OnboardingScreen
 import com.app.planify.screens.home.HomeScreen
 import com.app.planify.screens.tasks.AddTaskScreen
-// TODO: uncomment when feat/pomodoro is merged
-// import com.app.planify.screens.pomodoro.PomodoroScreen
+import com.app.planify.screens.pomodoro.PomodoroScreen
 // TODO: uncomment when feat/profile is merged
 // import com.app.planify.screens.profile.ProfileScreen
 import com.app.planify.screens.tasks.TasksScreen
@@ -37,8 +36,8 @@ fun AppNavigation() {
     val currentRoute = backStackEntry?.destination?.route
     val emailLinkState by EmailLinkAuthHandler.state.collectAsState()
 
-    // TODO: add Routes.POMODORO and Routes.PROFILE when their features are merged
-    val bottomBarRoutes = setOf(Routes.HOME, Routes.TASKS)
+    // TODO: add Routes.PROFILE when its feature is merged
+    val bottomBarRoutes = setOf(Routes.HOME, Routes.TASKS, Routes.POMODORO)
     val showBottomBar = currentRoute in bottomBarRoutes
 
     LaunchedEffect(emailLinkState) {
@@ -138,8 +137,9 @@ fun AppNavigation() {
                 )
             }
 
-                // TODO: temporary — enable when feat/pomodoro is merged
-            // composable(Routes.POMODORO) { PomodoroScreen() }
+            composable(Routes.POMODORO) {
+                PomodoroScreen()
+            }
 
             // TODO: temporary — enable when feat/profile is merged
             // composable(Routes.PROFILE) { ProfileScreen() }
