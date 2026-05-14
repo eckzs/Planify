@@ -5,10 +5,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 
 class HomeViewModel : ViewModel() {
 
     private val firebaseAuth = FirebaseAuth.getInstance()
+    private val firestore = FirebaseFirestore.getInstance()
 
     var userName by mutableStateOf("Estudiante")
         private set
@@ -27,13 +29,32 @@ class HomeViewModel : ViewModel() {
         private set
 
     init {
-        loadGoogleUserName()
+        loadUserName()
     }
 
-    private fun loadGoogleUserName() {
-        val fullName = firebaseAuth.currentUser?.displayName
+    private fun loadUserName() {
+        val user = firebaseAuth.currentUser
+        val userId = user?.uid
 
-        userName = fullName
+        if (userId == null) {
+            userName = "Estudiante"
+            return
+        }
+
+        firestore.collection("users")
+            .document(userId)
+            .get()
+            .addOnSuccessListener { document ->
+                val savedName = document.getString("name")
+                userName = getFirstName(savedName ?: user.displayName)
+            }
+            .addOnFailureListener {
+                userName = getFirstName(user.displayName)
+            }
+    }
+
+    private fun getFirstName(fullName: String?): String {
+        return fullName
             ?.trim()
             ?.split(" ")
             ?.firstOrNull()
