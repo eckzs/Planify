@@ -9,10 +9,12 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.app.planify.components.PlBottomBar
 import com.app.planify.constants.Routes
 import com.app.planify.logic.utils.EmailLinkAuthHandler
@@ -20,6 +22,7 @@ import com.app.planify.logic.utils.EmailLinkState
 import com.app.planify.screens.auth.AuthScreen
 import com.app.planify.screens.auth.OnboardingScreen
 import com.app.planify.screens.home.HomeScreen
+import com.app.planify.screens.tasks.AddTaskScreen
 // TODO: uncomment when feat/pomodoro is merged
 // import com.app.planify.screens.pomodoro.PomodoroScreen
 // TODO: uncomment when feat/profile is merged
@@ -103,7 +106,34 @@ fun AppNavigation() {
             composable(Routes.TASKS) {
                 TasksScreen(
                     onNavigateToAdd = {
-                        // TODO: navController.navigate(Routes.ADD_TASK)
+                        navController.navigate(Routes.ADD_TASK)
+                    },
+                    onNavigateToEdit = { taskId ->
+                        navController.navigate(Routes.taskDetail(taskId))
+                    }
+                )
+            }
+
+            composable(Routes.ADD_TASK) {
+                AddTaskScreen(
+                    onNavigateBack = {
+                        navController.popBackStack()
+                    }
+                )
+            }
+
+            composable(
+                route = Routes.TASK_DETAIL,
+                arguments = listOf(navArgument("taskId") { type = NavType.StringType })
+            ) { backStack ->
+                val taskId = android.net.Uri.decode(
+                    backStack.arguments?.getString("taskId") ?: ""
+                )
+
+                AddTaskScreen(
+                    taskId = taskId,
+                    onNavigateBack = {
+                        navController.popBackStack()
                     }
                 )
             }
