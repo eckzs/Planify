@@ -1,21 +1,24 @@
 package com.app.planify
 
+import android.widget.Toast
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.navigation.NavType
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import androidx.navigation.navArgument
 import com.app.planify.components.PlBottomBar
 import com.app.planify.constants.Routes
+import com.app.planify.logic.utils.EmailLinkAuthHandler
+import com.app.planify.logic.utils.EmailLinkState
 import com.app.planify.screens.auth.AuthScreen
 import com.app.planify.screens.auth.OnboardingScreen
-import com.app.planify.screens.auth.OtpScreen
 import com.app.planify.screens.home.HomeScreen
 // TODO: uncomment when feat/pomodoro is merged
 // import com.app.planify.screens.pomodoro.PomodoroScreen
@@ -26,12 +29,33 @@ import com.app.planify.screens.tasks.TasksScreen
 @Composable
 fun AppNavigation() {
     val navController = rememberNavController()
+    val context = LocalContext.current
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
+    val emailLinkState by EmailLinkAuthHandler.state.collectAsState()
 
     // TODO: add Routes.POMODORO and Routes.PROFILE when their features are merged
     val bottomBarRoutes = setOf(Routes.HOME, Routes.TASKS)
     val showBottomBar = currentRoute in bottomBarRoutes
+
+    LaunchedEffect(emailLinkState) {
+        when (val state = emailLinkState) {
+            is EmailLinkState.Success -> {
+                val nextRoute = if (state.isNewUser) Routes.ONBOARDING else Routes.HOME
+                navController.navigate(nextRoute) {
+                    popUpTo(Routes.AUTH) { inclusive = true }
+                }
+                EmailLinkAuthHandler.clearState()
+            }
+
+            is EmailLinkState.Error -> {
+                Toast.makeText(context, state.message, Toast.LENGTH_LONG).show()
+                EmailLinkAuthHandler.clearState()
+            }
+
+            null -> Unit
+        }
+    }
 
     Scaffold(
         bottomBar = {
@@ -48,35 +72,11 @@ fun AppNavigation() {
 
             composable(Routes.AUTH) {
                 AuthScreen(
-                    onNavigateToOtp = { email -> navController.navigate(Routes.otp(email)) },
                     onNavigateToHome = {
                         navController.navigate(Routes.HOME) {
                             popUpTo(Routes.AUTH) { inclusive = true }
                         }
                     }
-                )
-            }
-
-            composable(
-                route = Routes.OTP,
-                arguments = listOf(navArgument("email") { type = NavType.StringType })
-            ) { backStack ->
-                val email = android.net.Uri.decode(
-                    backStack.arguments?.getString("email") ?: ""
-                )
-                OtpScreen(
-                    email = email,
-                    onNavigateToOnboarding = {
-                        navController.navigate(Routes.ONBOARDING) {
-                            popUpTo(Routes.AUTH) { inclusive = true }
-                        }
-                    },
-                    onNavigateToHome = {
-                        navController.navigate(Routes.HOME) {
-                            popUpTo(Routes.AUTH) { inclusive = true }
-                        }
-                    },
-                    onNavigateBack = { navController.popBackStack() }
                 )
             }
 
