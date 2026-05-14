@@ -48,7 +48,12 @@ fun AppNavigation() {
 
             composable(Routes.AUTH) {
                 AuthScreen(
-                    onNavigateToOtp = { email -> navController.navigate(Routes.otp(email)) }
+                    onNavigateToOtp = { email -> navController.navigate(Routes.otp(email)) },
+                    onNavigateToHome = {
+                        navController.navigate(Routes.HOME) {
+                            popUpTo(Routes.AUTH) { inclusive = true }
+                        }
+                    }
                 )
             }
 
