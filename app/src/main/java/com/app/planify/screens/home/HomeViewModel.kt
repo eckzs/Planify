@@ -4,18 +4,20 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
+import com.google.firebase.auth.FirebaseAuth
 
 class HomeViewModel : ViewModel() {
 
-    // TODO: obtener nombre desde el perfil guardado en Supabase (TokenManager / ProfileRepository)
-    var userName by mutableStateOf("Erick")
+    private val firebaseAuth = FirebaseAuth.getInstance()
+
+    var userName by mutableStateOf("Estudiante")
         private set
 
     // TODO: reemplazar con TasksRepository.getTasks().count { !it.isDone }
     var pendingTasksCount by mutableStateOf(3)
         private set
 
-    // TODO: obtener últimas 2 tareas desde TasksRepository
+    // TODO: obtener ultimas 2 tareas desde TasksRepository
     var recentTasks by mutableStateOf(
         listOf(
             "Estudiar parcial de cálculo",
@@ -23,4 +25,19 @@ class HomeViewModel : ViewModel() {
         )
     )
         private set
+
+    init {
+        loadGoogleUserName()
+    }
+
+    private fun loadGoogleUserName() {
+        val fullName = firebaseAuth.currentUser?.displayName
+
+        userName = fullName
+            ?.trim()
+            ?.split(" ")
+            ?.firstOrNull()
+            ?.takeIf { it.isNotBlank() }
+            ?: "Estudiante"
+    }
 }
