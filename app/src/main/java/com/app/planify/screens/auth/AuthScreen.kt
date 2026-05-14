@@ -33,6 +33,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.app.planify.R
 import com.app.planify.components.PlButton
 import com.app.planify.components.PlInput
+import com.app.planify.logic.utils.EmailLinkPrefs
 import com.app.planify.ui.theme.PlColors
 import com.app.planify.ui.theme.PlSpacing
 import com.app.planify.ui.theme.PlTypography
@@ -43,7 +44,6 @@ import kotlinx.coroutines.launch
 @Composable
 fun AuthScreen(
     viewModel: AuthViewModel = viewModel(),
-    onNavigateToOtp: (String) -> Unit,
     onNavigateToHome: () -> Unit
 ) {
     val context = LocalContext.current
@@ -122,9 +122,13 @@ fun AuthScreen(
         Spacer(Modifier.height(PlSpacing.md))
 
         PlButton(
-            text = "Continuar",
+            text = "Enviar link de ingreso",
             enabled = viewModel.email.isNotBlank() && !viewModel.isLoading,
-            onClick = { viewModel.continuar(onNavigateToOtp) }
+            onClick = {
+                viewModel.sendEmailLink { email ->
+                    EmailLinkPrefs.saveEmail(context, email)
+                }
+            }
         )
 
         Spacer(Modifier.height(PlSpacing.sm))
@@ -140,8 +144,19 @@ fun AuthScreen(
             Spacer(Modifier.height(PlSpacing.sm))
         }
 
+        viewModel.successMessage?.let { message ->
+            Text(
+                text = message,
+                style = PlTypography.bodyMedium,
+                color = PlColors.Primary,
+                textAlign = TextAlign.Center
+            )
+
+            Spacer(Modifier.height(PlSpacing.sm))
+        }
+
         Text(
-            text = "Ingresa tu email, detectamos si es cuenta nueva",
+            text = "Ingresa tu email se te enviará un link de acceso",
             style = PlTypography.bodyMedium,
             color = PlColors.TextHint,
             textAlign = TextAlign.Center

@@ -3,7 +3,6 @@ package com.app.planify.constants
 object Routes {
   // Auth flow
   const val AUTH = "auth"
-  const val OTP = "otp/{email}"
   const val ONBOARDING = "onboarding"
 
   // Main app (bottom nav)
@@ -16,7 +15,4 @@ object Routes {
   // const val TASK_DETAIL = "tasks/{taskId}"
   // const val ADD_TASK    = "tasks/add"
   // fun taskDetail(taskId: Int) = "tasks/$taskId"
-
-  // Builder — email needs encoding because it contains '@'
-  fun otp(email: String) = "otp/${android.net.Uri.encode(email)}"
 }

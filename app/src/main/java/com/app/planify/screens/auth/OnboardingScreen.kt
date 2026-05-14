@@ -57,7 +57,7 @@ fun OnboardingScreen(
         PlInput(
             value = viewModel.career,
             onValueChange = viewModel::onCareerChange,
-            label = "Carrera (opcional)"
+            label = "Major (opcional)"
         )
 
         Spacer(Modifier.height(PlSpacing.md))
@@ -70,9 +70,14 @@ fun OnboardingScreen(
 
         Spacer(Modifier.height(PlSpacing.xl))
 
+        viewModel.errorMessage?.let { message ->
+            Text(message, style = PlTypography.bodyMedium, color = PlColors.Error)
+            Spacer(Modifier.height(PlSpacing.md))
+        }
+
         PlButton(
             text = "Empezar",
-            enabled = viewModel.name.isNotBlank(),
+            enabled = viewModel.name.isNotBlank() && !viewModel.isLoading,
             onClick = { viewModel.complete(onNavigateToHome) }
         )
     }
