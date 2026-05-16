@@ -30,6 +30,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.app.planify.screens.courses.CoursesScreen
 import com.app.planify.screens.flashcards.AddFlashcardScreen
 import com.app.planify.screens.flashcards.FlashcardsScreen
+import com.app.planify.screens.profile.ProfileScreen
 
 @Composable
 fun AppNavigation() {
@@ -43,7 +44,7 @@ fun AppNavigation() {
     val currentUser = FirebaseAuth.getInstance().currentUser
     val startDestination = if (currentUser != null) Routes.HOME else Routes.AUTH
 
-    val bottomBarRoutes = setOf(Routes.HOME, Routes.TASKS, Routes.POMODORO, Routes.COURSES)
+    val bottomBarRoutes = setOf(Routes.HOME, Routes.TASKS, Routes.POMODORO, Routes.COURSES, Routes.PROFILE)
     val showBottomBar = currentRoute in bottomBarRoutes
 
     LaunchedEffect(emailLinkState) {
@@ -176,6 +177,16 @@ fun AppNavigation() {
                     courseId = courseId,
                     onNavigateBack = { navController.popBackStack() },
                     onNavigateToAdd = { navController.navigate(Routes.addFlashcard(courseId)) }
+                )
+            }
+
+            composable(Routes.PROFILE) {
+                ProfileScreen(
+                    onNavigateToAuth = {
+                        navController.navigate(Routes.AUTH) {
+                            popUpTo(0) { inclusive = true }
+                        }
+                    }
                 )
             }
 
