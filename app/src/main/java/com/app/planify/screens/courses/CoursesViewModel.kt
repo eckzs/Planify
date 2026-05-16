@@ -5,7 +5,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.app.planify.api.models.Course
 import com.app.planify.api.services.CoursesRepository
 import kotlinx.coroutines.launch
 
@@ -54,10 +53,4 @@ class CoursesViewModel : ViewModel() {
                 .onFailure { state = CoursesState.Error(it.message ?: "Error al crear curso") }
         }
     }
-}
-
-sealed class CoursesState {
-    object Loading : CoursesState()
-    data class Success(val courses: List<Course>) : CoursesState()
-    data class Error(val message: String) : CoursesState()
 }

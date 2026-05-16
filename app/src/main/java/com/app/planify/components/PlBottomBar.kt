@@ -18,13 +18,6 @@ import com.app.planify.constants.Routes
 import com.app.planify.ui.theme.PlColors
 import com.app.planify.ui.theme.PlTypography
 
-private data class PlNavItem(
-    val label: String,
-    val route: String,
-    val icon: ImageVector,
-    val selectedIcon: ImageVector
-)
-
 private val navItems = listOf(
     PlNavItem("Home",     Routes.HOME,     Icons.Outlined.Home,         Icons.Filled.Home),
     PlNavItem("Tareas",   Routes.TASKS,    Icons.Outlined.CheckCircle,  Icons.Filled.CheckCircle),

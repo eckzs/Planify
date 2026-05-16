@@ -33,13 +33,3 @@ fun PlBadge(
     }
 }
 
-// Convenience: maps task priority string to the right color
-@Composable
-fun PlPriorityBadge(priority: String, modifier: Modifier = Modifier) {
-    val color = when (priority.lowercase()) {
-        "alta", "high"   -> PlColors.Error
-        "media", "medium" -> Color(0xFFB45309) // amber — no semantic token needed
-        else             -> PlColors.Primary   // baja / low
-    }
-    PlBadge(text = priority, modifier = modifier, containerColor = color)
-}

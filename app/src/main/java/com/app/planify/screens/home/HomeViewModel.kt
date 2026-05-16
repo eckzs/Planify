@@ -15,8 +15,6 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.ZoneId
 
-data class DailyMetric(val date: String, val count: Int)
-
 class HomeViewModel : ViewModel() {
 
     private val firebaseAuth = FirebaseAuth.getInstance()
@@ -78,7 +76,7 @@ class HomeViewModel : ViewModel() {
                 .onSuccess { tasks ->
                     pendingTasksCount = tasks.count { !it.completed }
                     recentTasks = tasks.filter { !it.completed }.take(2).map { it.title }
-                    
+
                     // Process daily tasks (last 7 days)
                     val last7Days = (0..6).map { LocalDate.now().minusDays(it.toLong()) }
                     dailyTasks = last7Days.map { date ->

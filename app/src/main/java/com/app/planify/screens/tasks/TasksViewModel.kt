@@ -9,7 +9,6 @@ import com.app.planify.api.models.Task
 import com.app.planify.api.services.TasksRepository
 import com.app.planify.constants.TaskConstants
 import kotlinx.coroutines.launch
-
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
@@ -114,8 +113,8 @@ class TasksViewModel : ViewModel() {
             val tagsList = tags.split(",").map { it.trim() }.filter { it.isNotBlank() }
 
             tasksRepository.createTask(
-                title = title, 
-                date = date, 
+                title = title,
+                date = date,
                 priority = priority,
                 courseId = courseId,
                 tags = tagsList,
@@ -143,9 +142,9 @@ class TasksViewModel : ViewModel() {
             val tagsList = tags.split(",").map { it.trim() }.filter { it.isNotBlank() }
 
             tasksRepository.updateTask(
-                taskId = taskId, 
-                title = title, 
-                date = date, 
+                taskId = taskId,
+                title = title,
+                date = date,
                 priority = priority,
                 courseId = courseId,
                 tags = tagsList,
@@ -197,10 +196,4 @@ class TasksViewModel : ViewModel() {
         notes = ""
         evidenceUrl = ""
     }
-}
-
-sealed class TasksState {
-    object Loading : TasksState()
-    data class Success(val tasks: List<Task>) : TasksState()
-    data class Error(val message: String) : TasksState()
 }

@@ -18,8 +18,6 @@ import java.time.format.DateTimeFormatter
 import java.time.temporal.TemporalAdjusters
 import java.time.DayOfWeek
 
-enum class PomodoroFilter { TODAY, WEEK }
-
 class PomodoroViewModel : ViewModel() {
 
     private val tasksRepository = TasksRepository()
