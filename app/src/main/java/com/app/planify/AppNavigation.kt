@@ -24,20 +24,26 @@ import com.app.planify.screens.auth.OnboardingScreen
 import com.app.planify.screens.home.HomeScreen
 import com.app.planify.screens.tasks.AddTaskScreen
 import com.app.planify.screens.pomodoro.PomodoroScreen
-// TODO: uncomment when feat/profile is merged
-// import com.app.planify.screens.profile.ProfileScreen
 import com.app.planify.screens.tasks.TasksScreen
+import com.google.firebase.auth.FirebaseAuth
+
+import com.app.planify.screens.courses.CoursesScreen
+import com.app.planify.screens.flashcards.AddFlashcardScreen
+import com.app.planify.screens.flashcards.FlashcardsScreen
 
 @Composable
 fun AppNavigation() {
+// ... (rest of imports and setup stays same)
     val navController = rememberNavController()
     val context = LocalContext.current
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
     val emailLinkState by EmailLinkAuthHandler.state.collectAsState()
 
-    // TODO: add Routes.PROFILE when its feature is merged
-    val bottomBarRoutes = setOf(Routes.HOME, Routes.TASKS, Routes.POMODORO)
+    val currentUser = FirebaseAuth.getInstance().currentUser
+    val startDestination = if (currentUser != null) Routes.HOME else Routes.AUTH
+
+    val bottomBarRoutes = setOf(Routes.HOME, Routes.TASKS, Routes.POMODORO, Routes.COURSES)
     val showBottomBar = currentRoute in bottomBarRoutes
 
     LaunchedEffect(emailLinkState) {
@@ -66,7 +72,7 @@ fun AppNavigation() {
     ) { innerPadding ->
         NavHost(
             navController = navController,
-            startDestination = Routes.AUTH,
+            startDestination = startDestination,
             modifier = Modifier.padding(innerPadding)
         ) {
 
@@ -109,6 +115,9 @@ fun AppNavigation() {
                     },
                     onNavigateToEdit = { taskId ->
                         navController.navigate(Routes.taskDetail(taskId))
+                    },
+                    onNavigateToPomodoro = { taskId ->
+                        navController.navigate(Routes.pomodoro(taskId))
                     }
                 )
             }
@@ -141,8 +150,47 @@ fun AppNavigation() {
                 PomodoroScreen()
             }
 
-            // TODO: temporary — enable when feat/profile is merged
-            // composable(Routes.PROFILE) { ProfileScreen() }
+            composable(Routes.POMODORO_WITH_TASK, arguments = listOf(navArgument("taskId") { type = NavType.StringType })) { backStack ->
+                val taskId = android.net.Uri.decode(backStack.arguments?.getString("taskId") ?: "")
+                PomodoroScreen(taskId = taskId)
+            }
+
+            // ── Study Toolkit ──────────────────────────────────────────────────
+
+            composable(Routes.COURSES) {
+                CoursesScreen(
+                    onNavigateToCourseDetail = { courseId ->
+                        navController.navigate(Routes.flashcards(courseId))
+                    }
+                )
+            }
+
+            composable(
+                route = Routes.FLASHCARDS_STUDY,
+                arguments = listOf(navArgument("courseId") { type = NavType.StringType })
+            ) { backStack ->
+                val courseId = android.net.Uri.decode(
+                    backStack.arguments?.getString("courseId") ?: ""
+                )
+                FlashcardsScreen(
+                    courseId = courseId,
+                    onNavigateBack = { navController.popBackStack() },
+                    onNavigateToAdd = { navController.navigate(Routes.addFlashcard(courseId)) }
+                )
+            }
+
+            composable(
+                route = Routes.ADD_FLASHCARD,
+                arguments = listOf(navArgument("courseId") { type = NavType.StringType })
+            ) { backStack ->
+                val courseId = android.net.Uri.decode(
+                    backStack.arguments?.getString("courseId") ?: ""
+                )
+                AddFlashcardScreen(
+                    courseId = courseId,
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
         }
     }
 }

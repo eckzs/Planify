@@ -7,35 +7,21 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ArrowBackIosNew
-import androidx.compose.material3.Button
-import androidx.compose.material3.DatePicker
-import androidx.compose.material3.DatePickerDialog
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuAnchorType
-import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberDatePickerState
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.app.planify.api.models.Course
 import com.app.planify.components.PlButton
 import com.app.planify.components.PlInput
 import com.app.planify.constants.TaskConstants
+import com.app.planify.screens.courses.CoursesState
+import com.app.planify.screens.courses.CoursesViewModel
 import com.app.planify.ui.theme.PlColors
 import com.app.planify.ui.theme.PlSpacing
 import com.app.planify.ui.theme.PlTypography
@@ -48,6 +34,7 @@ import java.time.format.DateTimeFormatter
 fun AddTaskScreen(
     taskId: String? = null,
     viewModel: TasksViewModel = viewModel(),
+    coursesViewModel: CoursesViewModel = viewModel(),
     onNavigateBack: () -> Unit
 ) {
     val isEditing = taskId != null
@@ -57,6 +44,8 @@ fun AddTaskScreen(
     LaunchedEffect(taskId) {
         if (taskId != null) {
             viewModel.loadTaskForEdit(taskId)
+        } else {
+            viewModel.prepareNewTask()
         }
     }
 
@@ -64,6 +53,7 @@ fun AddTaskScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(PlColors.Background)
+            .verticalScroll(rememberScrollState())
             .padding(horizontal = PlSpacing.lg)
     ) {
         Spacer(Modifier.height(PlSpacing.lg))
@@ -89,9 +79,43 @@ fun AddTaskScreen(
 
         Spacer(Modifier.height(PlSpacing.md))
 
+        CourseDropdown(
+            coursesViewModel = coursesViewModel,
+            selectedCourseId = viewModel.courseId,
+            onCourseChange = viewModel::onCourseChange
+        )
+
+        Spacer(Modifier.height(PlSpacing.md))
+
         PriorityDropdown(
             value = viewModel.priority,
             onValueChange = viewModel::onPriorityChange
+        )
+
+        Spacer(Modifier.height(PlSpacing.md))
+
+        PlInput(
+            value = viewModel.tags,
+            onValueChange = viewModel::onTagsChange,
+            label = "Etiquetas (separadas por comas)"
+        )
+
+        Spacer(Modifier.height(PlSpacing.md))
+
+        PlInput(
+            value = viewModel.evidenceUrl,
+            onValueChange = viewModel::onEvidenceUrlChange,
+            label = "Enlace a evidencia (URL)"
+        )
+
+        Spacer(Modifier.height(PlSpacing.md))
+
+        OutlinedTextField(
+            value = viewModel.notes,
+            onValueChange = viewModel::onNotesChange,
+            label = { Text("Notas") },
+            modifier = Modifier.fillMaxWidth(),
+            minLines = 3
         )
 
         Spacer(Modifier.height(PlSpacing.xl))
@@ -115,23 +139,14 @@ fun AddTaskScreen(
             enabled = viewModel.title.isNotBlank(),
             onClick = {
                 if (taskId == null) {
-                    viewModel.createTask(
-                        title = viewModel.title,
-                        date = viewModel.date,
-                        priority = viewModel.priority.ifBlank { TaskConstants.PRIORITY_MEDIUM },
-                        onSuccess = onNavigateBack
-                    )
+                    viewModel.createTask(onSuccess = onNavigateBack)
                 } else {
-                    viewModel.updateTask(
-                        taskId = taskId,
-                        title = viewModel.title,
-                        date = viewModel.date,
-                        priority = viewModel.priority.ifBlank { TaskConstants.PRIORITY_MEDIUM },
-                        onSuccess = onNavigateBack
-                    )
+                    viewModel.updateTask(taskId = taskId, onSuccess = onNavigateBack)
                 }
             }
         )
+        
+        Spacer(Modifier.height(PlSpacing.xl))
     }
 
     if (showDatePicker) {
@@ -156,6 +171,56 @@ fun AddTaskScreen(
             }
         ) {
             DatePicker(state = datePickerState)
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CourseDropdown(
+    coursesViewModel: CoursesViewModel,
+    selectedCourseId: String?,
+    onCourseChange: (String?) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val courses = (coursesViewModel.state as? CoursesState.Success)?.courses ?: emptyList()
+    val selectedCourseName = courses.find { it.id == selectedCourseId }?.name ?: "Ninguno"
+
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = !expanded }
+    ) {
+        OutlinedTextField(
+            value = selectedCourseName,
+            onValueChange = {},
+            readOnly = true,
+            label = { Text("Curso / Proyecto") },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            modifier = Modifier
+                .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable, true)
+                .fillMaxWidth()
+        )
+
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            DropdownMenuItem(
+                text = { Text("Ninguno") },
+                onClick = {
+                    onCourseChange(null)
+                    expanded = false
+                }
+            )
+            courses.forEach { course ->
+                DropdownMenuItem(
+                    text = { Text(course.name) },
+                    onClick = {
+                        onCourseChange(course.id)
+                        expanded = false
+                    }
+                )
+            }
         }
     }
 }

@@ -33,6 +33,19 @@ class TasksRepository {
             }
     }
 
+    suspend fun getTasksByCourse(courseId: String): Result<List<Task>> = suspendCancellableCoroutine { continuation ->
+        tasksCollection
+            .whereEqualTo(TaskConstants.FIELD_COURSE_ID, courseId)
+            .get()
+            .addOnSuccessListener { snapshot ->
+                val tasks = snapshot.documents.map { Task.fromDocument(it) }
+                continuation.resume(Result.success(tasks))
+            }
+            .addOnFailureListener { exception ->
+                continuation.resume(Result.failure(exception))
+            }
+    }
+
     suspend fun getTask(taskId: String): Result<Task> = suspendCancellableCoroutine { continuation ->
         val userId = firebaseAuth.currentUser?.uid
 
@@ -63,10 +76,16 @@ class TasksRepository {
             }
     }
 
+    // ... (rest of methods until createTask)
+
     suspend fun createTask(
         title: String,
         date: String,
-        priority: String
+        priority: String,
+        courseId: String? = null,
+        tags: List<String> = emptyList(),
+        evidenceUrl: String? = null,
+        notes: String = ""
     ): Result<Unit> = suspendCancellableCoroutine { continuation ->
         val userId = firebaseAuth.currentUser?.uid
 
@@ -79,7 +98,11 @@ class TasksRepository {
             title = title.trim(),
             date = date.trim(),
             priority = priority,
-            userId = userId
+            userId = userId,
+            courseId = courseId,
+            tags = tags,
+            evidenceUrl = evidenceUrl,
+            notes = notes
         )
 
         tasksCollection
@@ -96,12 +119,20 @@ class TasksRepository {
         taskId: String,
         title: String,
         date: String,
-        priority: String
+        priority: String,
+        courseId: String? = null,
+        tags: List<String> = emptyList(),
+        evidenceUrl: String? = null,
+        notes: String = ""
     ): Result<Unit> = suspendCancellableCoroutine { continuation ->
         val data = mapOf(
             TaskConstants.FIELD_TITLE to title.trim(),
             TaskConstants.FIELD_DATE to date.trim(),
-            TaskConstants.FIELD_PRIORITY to priority
+            TaskConstants.FIELD_PRIORITY to priority,
+            TaskConstants.FIELD_COURSE_ID to courseId,
+            TaskConstants.FIELD_TAGS to tags,
+            TaskConstants.FIELD_EVIDENCE_URL to evidenceUrl,
+            TaskConstants.FIELD_NOTES to notes
         )
 
         tasksCollection
@@ -119,6 +150,18 @@ class TasksRepository {
         tasksCollection
             .document(taskId)
             .delete()
+            .addOnSuccessListener {
+                continuation.resume(Result.success(Unit))
+            }
+            .addOnFailureListener { exception ->
+                continuation.resume(Result.failure(exception))
+            }
+    }
+
+    suspend fun toggleTaskCompletion(taskId: String, completed: Boolean): Result<Unit> = suspendCancellableCoroutine { continuation ->
+        tasksCollection
+            .document(taskId)
+            .update(TaskConstants.FIELD_COMPLETED, completed)
             .addOnSuccessListener {
                 continuation.resume(Result.success(Unit))
             }

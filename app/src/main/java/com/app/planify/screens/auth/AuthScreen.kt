@@ -1,6 +1,7 @@
 package com.app.planify.screens.auth
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -22,7 +23,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.credentials.CredentialManager
@@ -105,7 +108,12 @@ fun AuthScreen(
             shape = RoundedCornerShape(12.dp),
             border = BorderStroke(1.dp, PlColors.TextHint)
         ) {
-            Text("G  ", color = PlColors.Primary, style = PlTypography.titleMedium)
+            Image(
+                painter = painterResource(id = R.drawable.ic_google),
+                contentDescription = "Google Logo",
+                modifier = Modifier.size(20.dp)
+            )
+            Spacer(Modifier.size(8.dp))
             Text("Continuar con Google", style = PlTypography.labelLarge)
         }
 
@@ -166,17 +174,19 @@ fun AuthScreen(
 
 @Composable
 private fun PlLogo() {
-    Box(
-        modifier = Modifier
-            .size(72.dp)
-            .background(PlColors.Primary, CircleShape),
-        contentAlignment = Alignment.Center
-    ) {
-        Text("P", style = PlTypography.headlineMedium, color = PlColors.OnPrimary)
-    }
-    Spacer(Modifier.height(PlSpacing.md))
-    Text("Planify", style = PlTypography.headlineLarge, color = PlColors.TextMain)
-    Text("tu kit de estudio", style = PlTypography.bodyMedium, color = PlColors.TextHint)
+    Text(
+        text = "Planify",
+        style = PlTypography.headlineLarge,
+        color = PlColors.Primary,
+        fontWeight = FontWeight.Bold
+    )
+    Spacer(Modifier.height(PlSpacing.xs))
+    Text(
+        text = "Tu vida organizada, un paso a la vez",
+        style = PlTypography.bodyLarge,
+        color = PlColors.TextHint,
+        textAlign = TextAlign.Center
+    )
 }
 
 @Composable

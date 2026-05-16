@@ -13,13 +13,27 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.time.temporal.TemporalAdjusters
+import java.time.DayOfWeek
+
+enum class PomodoroFilter { TODAY, WEEK }
+
 class PomodoroViewModel : ViewModel() {
 
     private val tasksRepository = TasksRepository()
     private val pomodoroRepository = PomodoroRepository()
+    private val dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
     private var timerJob: Job? = null
 
     var tasks by mutableStateOf(emptyList<Task>())
+        private set
+
+    var filteredTasks by mutableStateOf(emptyList<Task>())
+        private set
+
+    var filterMode by mutableStateOf(PomodoroFilter.TODAY)
         private set
 
     var selectedTask by mutableStateOf<Task?>(null)
@@ -46,11 +60,57 @@ class PomodoroViewModel : ViewModel() {
     var isPaused by mutableStateOf(false)
         private set
 
+    var progress by mutableStateOf(1f)
+        private set
+
     var errorMessage by mutableStateOf<String?>(null)
         private set
 
     private var phaseStartedAtMillis: Long = 0L
     private var phaseEndsAtMillis: Long = 0L
+
+    fun onFilterModeChange(mode: PomodoroFilter) {
+        filterMode = mode
+        applyFilter()
+    }
+
+    private fun applyFilter() {
+        val today = LocalDate.now()
+        filteredTasks = when (filterMode) {
+            PomodoroFilter.TODAY -> {
+                val todayStr = today.format(dateFormatter)
+                tasks.filter { it.date == todayStr }
+            }
+            PomodoroFilter.WEEK -> {
+                val startOfWeek = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+                val endOfWeek = today.with(TemporalAdjusters.nextOrSame(DayOfWeek.SUNDAY))
+                tasks.filter {
+                    try {
+                        val taskDate = LocalDate.parse(it.date, dateFormatter)
+                        !taskDate.isBefore(startOfWeek) && !taskDate.isAfter(endOfWeek)
+                    } catch (e: Exception) { false }
+                }
+            }
+        }
+    }
+
+    fun selectTaskFromDashboard(task: Task) {
+        associatedTask = task
+        resetTimer()
+    }
+
+    fun loadTaskById(taskId: String) {
+        viewModelScope.launch {
+            tasksRepository.getTask(taskId)
+                .onSuccess { task ->
+                    associatedTask = task
+                    resetTimer()
+                }
+                .onFailure {
+                    errorMessage = it.message ?: "No se pudo cargar la tarea"
+                }
+        }
+    }
 
     init {
         loadTasks()
@@ -61,10 +121,20 @@ class PomodoroViewModel : ViewModel() {
             tasksRepository.getTasks()
                 .onSuccess { taskList ->
                     tasks = taskList
+                    applyFilter()
                     selectedTask = selectedTask ?: taskList.firstOrNull()
                 }
                 .onFailure {
                     errorMessage = it.message ?: "No se pudieron cargar las tareas"
+                }
+        }
+    }
+
+    private fun loadMetrics() {
+        viewModelScope.launch {
+            pomodoroRepository.getSessions()
+                .onSuccess { sessions: List<com.app.planify.api.models.PomodoroSession> ->
+                    // Proceso de métricas si fuera necesario en este ViewModel
                 }
         }
     }
@@ -158,6 +228,7 @@ class PomodoroViewModel : ViewModel() {
         val task = associatedTask ?: return
         mode = newMode
         remainingSeconds = secondsForMode(newMode)
+        progress = 1f
         phaseStartedAtMillis = System.currentTimeMillis()
         phaseEndsAtMillis = phaseStartedAtMillis + remainingSeconds * 1000L
         isRunning = true
@@ -184,10 +255,12 @@ class PomodoroViewModel : ViewModel() {
 
     private fun startTimer() {
         timerJob?.cancel()
+        val totalSeconds = secondsForMode(mode)
         timerJob = viewModelScope.launch {
             while (remainingSeconds > 0 && isRunning) {
                 delay(1000)
                 remainingSeconds--
+                progress = remainingSeconds.toFloat() / totalSeconds.toFloat()
             }
 
             if (remainingSeconds == 0 && isRunning) {
