@@ -32,9 +32,6 @@ class TasksViewModel : ViewModel() {
     var courseId by mutableStateOf<String?>(null)
         private set
 
-    var tags by mutableStateOf("")
-        private set
-
     var notes by mutableStateOf("")
         private set
 
@@ -81,7 +78,6 @@ class TasksViewModel : ViewModel() {
     fun onDateChange(value: String) { date = value }
     fun onPriorityChange(value: String) { priority = value }
     fun onCourseChange(value: String?) { courseId = value }
-    fun onTagsChange(value: String) { tags = value }
     fun onNotesChange(value: String) { notes = value }
     fun onEvidenceUrlChange(value: String) { evidenceUrl = value }
 
@@ -93,7 +89,6 @@ class TasksViewModel : ViewModel() {
                     date = task.date
                     priority = task.priority.ifBlank { TaskConstants.PRIORITY_MEDIUM }
                     courseId = task.courseId
-                    tags = task.tags.joinToString(", ")
                     notes = task.notes
                     evidenceUrl = task.evidenceUrl ?: ""
                 }
@@ -110,14 +105,12 @@ class TasksViewModel : ViewModel() {
                 return@launch
             }
 
-            val tagsList = tags.split(",").map { it.trim() }.filter { it.isNotBlank() }
-
             tasksRepository.createTask(
                 title = title,
                 date = date,
                 priority = priority,
                 courseId = courseId,
-                tags = tagsList,
+                tags = emptyList(),
                 evidenceUrl = evidenceUrl.takeIf { it.isNotBlank() },
                 notes = notes
             )
@@ -139,15 +132,13 @@ class TasksViewModel : ViewModel() {
                 return@launch
             }
 
-            val tagsList = tags.split(",").map { it.trim() }.filter { it.isNotBlank() }
-
             tasksRepository.updateTask(
                 taskId = taskId,
                 title = title,
                 date = date,
                 priority = priority,
                 courseId = courseId,
-                tags = tagsList,
+                tags = emptyList(),
                 evidenceUrl = evidenceUrl.takeIf { it.isNotBlank() },
                 notes = notes
             )
@@ -192,7 +183,6 @@ class TasksViewModel : ViewModel() {
         date = ""
         priority = TaskConstants.PRIORITY_MEDIUM
         courseId = null
-        tags = ""
         notes = ""
         evidenceUrl = ""
     }
