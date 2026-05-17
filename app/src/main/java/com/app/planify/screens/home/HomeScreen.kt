@@ -44,7 +44,7 @@ fun HomeScreen(
 
         // --- Analytics Section ---
         Text(
-            text = "Tu Progreso (últimos 7 días)",
+            text = "Esta semana",
             style = PlTypography.titleMedium,
             color = PlColors.TextMain,
             fontWeight = FontWeight.Bold

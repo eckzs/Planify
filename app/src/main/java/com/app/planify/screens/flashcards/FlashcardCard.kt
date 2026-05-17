@@ -1,21 +1,32 @@
 package com.app.planify.screens.flashcards
 
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.HelpOutline
+import androidx.compose.material.icons.outlined.Lightbulb
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.app.planify.api.models.Flashcard
-import com.app.planify.components.PlCard
 import com.app.planify.ui.theme.PlColors
 import com.app.planify.ui.theme.PlSpacing
 import com.app.planify.ui.theme.PlTypography
@@ -92,9 +103,25 @@ fun StudyContent(
     }
 }
 
+private val FrontColor = Color(0xFFD4A017)
+private val FrontColorBg = Color(0x1AD4A017)
+private val BackColor = Color(0xFF4CAF50)
+private val BackColorBg = Color(0x1A4CAF50)
+
 @Composable
 fun CardSide(text: String, label: String, modifier: Modifier = Modifier) {
-    PlCard(modifier = modifier.fillMaxSize()) {
+    val isFront = label == "Pregunta"
+    val accentColor = if (isFront) FrontColor else BackColor
+    val accentBg = if (isFront) FrontColorBg else BackColorBg
+    val icon = if (isFront) Icons.Outlined.HelpOutline else Icons.Outlined.Lightbulb
+
+    Card(
+        modifier = modifier.fillMaxSize(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = PlColors.Surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        border = BorderStroke(2.dp, accentColor)
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -102,13 +129,28 @@ fun CardSide(text: String, label: String, modifier: Modifier = Modifier) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Text(
-                text = label,
-                style = PlTypography.labelSmall,
-                color = PlColors.Primary,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(Modifier.height(PlSpacing.md))
+            Row(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(accentBg)
+                    .padding(horizontal = PlSpacing.md, vertical = PlSpacing.xs),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(PlSpacing.xs)
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = accentColor,
+                    modifier = Modifier.size(16.dp)
+                )
+                Text(
+                    text = label,
+                    style = PlTypography.labelMedium,
+                    color = accentColor,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            Spacer(Modifier.height(PlSpacing.lg))
             Text(
                 text = text,
                 style = PlTypography.headlineMedium,

@@ -61,6 +61,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.app.planify.components.PlButton
 import com.app.planify.components.PlInput
+import com.app.planify.components.PlLoader
 import com.app.planify.constants.TaskConstants
 import com.app.planify.screens.courses.CoursesState
 import com.app.planify.screens.courses.CoursesViewModel
@@ -120,6 +121,18 @@ fun AddTaskScreen(
         },
         containerColor = PlColors.Background
     ) { padding ->
+        if (isEditing && viewModel.isEditLoading) {
+            Box(
+                modifier = Modifier
+                    .padding(padding)
+                    .fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                PlLoader()
+            }
+            return@Scaffold
+        }
+
         Column(
             modifier = Modifier
                 .padding(padding)

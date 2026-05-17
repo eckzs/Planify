@@ -38,6 +38,9 @@ class TasksViewModel : ViewModel() {
     var evidenceUrl by mutableStateOf("")
         private set
 
+    var isEditLoading by mutableStateOf(false)
+        private set
+
     var selectedDate by mutableStateOf(LocalDate.now())
         private set
 
@@ -82,6 +85,7 @@ class TasksViewModel : ViewModel() {
     fun onEvidenceUrlChange(value: String) { evidenceUrl = value }
 
     fun loadTaskForEdit(taskId: String) {
+        isEditLoading = true
         viewModelScope.launch {
             tasksRepository.getTask(taskId)
                 .onSuccess { task ->
@@ -95,6 +99,7 @@ class TasksViewModel : ViewModel() {
                 .onFailure {
                     state = TasksState.Error(it.message ?: "No se pudo cargar la tarea")
                 }
+            isEditLoading = false
         }
     }
 
@@ -154,21 +159,32 @@ class TasksViewModel : ViewModel() {
     }
 
     fun deleteTask(taskId: String) {
+        val current = state
+        if (current is TasksState.Success) {
+            state = TasksState.Success(current.tasks.filter { it.id != taskId })
+        }
+
         viewModelScope.launch {
             tasksRepository.deleteTask(taskId)
-                .onSuccess { loadTasks() }
                 .onFailure {
-                    state = TasksState.Error(it.message ?: "No se pudo eliminar la tarea")
+                    state = current
                 }
         }
     }
 
     fun toggleTaskCompletion(task: Task) {
+        val current = state
+        if (current is TasksState.Success) {
+            val updated = current.tasks.map {
+                if (it.id == task.id) it.copy(completed = !it.completed) else it
+            }
+            state = TasksState.Success(updated)
+        }
+
         viewModelScope.launch {
             tasksRepository.toggleTaskCompletion(task.id, !task.completed)
-                .onSuccess { loadTasks() }
                 .onFailure {
-                    state = TasksState.Error(it.message ?: "No se pudo actualizar la tarea")
+                    state = current
                 }
         }
     }

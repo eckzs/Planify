@@ -21,7 +21,6 @@ import com.app.planify.ui.theme.PlTypography
 private val navItems = listOf(
     PlNavItem("Home",     Routes.HOME,     Icons.Outlined.Home,         Icons.Filled.Home),
     PlNavItem("Tareas",   Routes.TASKS,    Icons.Outlined.CheckCircle,  Icons.Filled.CheckCircle),
-    PlNavItem("Pomodoro", Routes.POMODORO, Icons.Outlined.Timer,        Icons.Filled.Timer),
     PlNavItem("Cursos",   Routes.COURSES,  Icons.Outlined.Book,         Icons.Filled.Book),
     PlNavItem("Perfil",   Routes.PROFILE,  Icons.Outlined.Person,       Icons.Filled.Person),
 )
@@ -45,8 +44,12 @@ fun PlBottomBar(
                 onClick = {
                     if (!selected) {
                         navController.navigate(item.route) {
-                            popUpTo(Routes.HOME) { inclusive = false }
+                            popUpTo(Routes.HOME) {
+                                inclusive = false
+                                saveState = true
+                            }
                             launchSingleTop = true
+                            restoreState = true
                         }
                     }
                 },

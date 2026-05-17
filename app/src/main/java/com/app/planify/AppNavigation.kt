@@ -25,6 +25,7 @@ import com.app.planify.screens.home.HomeScreen
 import com.app.planify.screens.tasks.AddTaskScreen
 import com.app.planify.screens.pomodoro.PomodoroScreen
 import com.app.planify.screens.tasks.TasksScreen
+import com.app.planify.screens.tasks.TasksViewModel
 import com.google.firebase.auth.FirebaseAuth
 
 import com.app.planify.screens.courses.CoursesScreen
@@ -44,7 +45,7 @@ fun AppNavigation() {
     val currentUser = FirebaseAuth.getInstance().currentUser
     val startDestination = if (currentUser != null) Routes.HOME else Routes.AUTH
 
-    val bottomBarRoutes = setOf(Routes.HOME, Routes.TASKS, Routes.POMODORO, Routes.COURSES, Routes.PROFILE)
+    val bottomBarRoutes = setOf(Routes.HOME, Routes.TASKS, Routes.COURSES, Routes.PROFILE)
     val showBottomBar = currentRoute in bottomBarRoutes
 
     LaunchedEffect(emailLinkState) {
@@ -109,8 +110,19 @@ fun AppNavigation() {
                 )
             }
 
-            composable(Routes.TASKS) {
+            composable(Routes.TASKS) { entry ->
+                val taskChanged = entry.savedStateHandle.get<Boolean>("task_changed") == true
+                val tasksViewModel: TasksViewModel = androidx.lifecycle.viewmodel.compose.viewModel(entry)
+
+                LaunchedEffect(taskChanged) {
+                    if (taskChanged) {
+                        tasksViewModel.loadTasks()
+                        entry.savedStateHandle["task_changed"] = false
+                    }
+                }
+
                 TasksScreen(
+                    viewModel = tasksViewModel,
                     onNavigateToAdd = {
                         navController.navigate(Routes.ADD_TASK)
                     },
@@ -126,6 +138,8 @@ fun AppNavigation() {
             composable(Routes.ADD_TASK) {
                 AddTaskScreen(
                     onNavigateBack = {
+                        navController.previousBackStackEntry
+                            ?.savedStateHandle?.set("task_changed", true)
                         navController.popBackStack()
                     }
                 )
@@ -142,6 +156,8 @@ fun AppNavigation() {
                 AddTaskScreen(
                     taskId = taskId,
                     onNavigateBack = {
+                        navController.previousBackStackEntry
+                            ?.savedStateHandle?.set("task_changed", true)
                         navController.popBackStack()
                     }
                 )

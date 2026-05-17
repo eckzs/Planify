@@ -8,14 +8,21 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.app.planify.components.PlErrorMessage
 import com.app.planify.components.PlFab
 import com.app.planify.components.PlLoader
+import com.app.planify.logic.utils.PomodoroState
 import com.app.planify.ui.theme.PlColors
 import com.app.planify.ui.theme.PlSpacing
 import com.app.planify.ui.theme.PlTypography
@@ -29,6 +36,7 @@ fun TasksScreen(
     onNavigateToPomodoro: (String) -> Unit = {}
 ) {
     val state = viewModel.state
+    var pendingPomodoroTaskId by remember { mutableStateOf<String?>(null) }
 
     Box(
         modifier = Modifier
@@ -48,7 +56,13 @@ fun TasksScreen(
                     tasks = state.tasks,
                     onTaskClick = onNavigateToEdit,
                     onDeleteTask = viewModel::deleteTask,
-                    onPomodoroClick = onNavigateToPomodoro,
+                    onPomodoroClick = { taskId ->
+                        if (PomodoroState.isRunning && PomodoroState.activeTaskId != taskId) {
+                            pendingPomodoroTaskId = taskId
+                        } else {
+                            onNavigateToPomodoro(taskId)
+                        }
+                    },
                     onToggleCompletion = viewModel::toggleTaskCompletion
                 )
             }
@@ -59,6 +73,27 @@ fun TasksScreen(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .padding(PlSpacing.lg)
+        )
+    }
+
+    pendingPomodoroTaskId?.let { taskId ->
+        AlertDialog(
+            onDismissRequest = { pendingPomodoroTaskId = null },
+            title = { Text("Timer activo", style = PlTypography.titleMedium) },
+            text = { Text("Ya hay un pomodoro en curso. ¿Detener el actual e iniciar uno nuevo?", style = PlTypography.bodyMedium) },
+            confirmButton = {
+                TextButton(onClick = {
+                    pendingPomodoroTaskId = null
+                    onNavigateToPomodoro(taskId)
+                }) {
+                    Text("Detener y cambiar", color = PlColors.Primary)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingPomodoroTaskId = null }) {
+                    Text("Cancelar")
+                }
+            }
         )
     }
 }
@@ -72,7 +107,7 @@ private fun TasksHeader(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = PlSpacing.md)
+            .padding(top = PlSpacing.lg, bottom = PlSpacing.sm)
     ) {
         Text(
             "Mis Tareas",

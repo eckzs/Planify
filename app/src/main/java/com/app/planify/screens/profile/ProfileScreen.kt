@@ -28,6 +28,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -83,6 +84,7 @@ fun ProfileScreen(
         PlCard(modifier = Modifier.fillMaxWidth()) {
             ThemeRow(
                 isDarkTheme = AppSettings.isDarkTheme,
+                isResolvedDark = AppSettings.isDarkTheme ?: isSystemInDarkTheme(),
                 onToggle = { viewModel.cycleDarkTheme(context) }
             )
             HorizontalDivider(
@@ -196,7 +198,7 @@ private fun ProfileHeader(
 }
 
 @Composable
-private fun ThemeRow(isDarkTheme: Boolean?, onToggle: () -> Unit) {
+private fun ThemeRow(isDarkTheme: Boolean?, isResolvedDark: Boolean, onToggle: () -> Unit) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -224,7 +226,7 @@ private fun ThemeRow(isDarkTheme: Boolean?, onToggle: () -> Unit) {
             }
         }
         Switch(
-            checked = isDarkTheme == true,
+            checked = isResolvedDark,
             onCheckedChange = { onToggle() },
             colors = SwitchDefaults.colors(
                 checkedThumbColor = PlColors.OnPrimary,

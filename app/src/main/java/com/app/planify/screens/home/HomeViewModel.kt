@@ -11,8 +11,10 @@ import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.launch
 
 import com.app.planify.api.services.PomodoroRepository
+import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import java.time.temporal.TemporalAdjusters
 import java.time.ZoneId
 
 class HomeViewModel : ViewModel() {
@@ -70,36 +72,39 @@ class HomeViewModel : ViewModel() {
     }
 
     fun loadData() {
+        val weekDays = weekDaysFromMonday()
+
         viewModelScope.launch {
-            // Load Tasks
             tasksRepository.getTasks()
                 .onSuccess { tasks ->
                     pendingTasksCount = tasks.count { !it.completed }
                     recentTasks = tasks.filter { !it.completed }.take(2).map { it.title }
 
-                    // Process daily tasks (last 7 days)
-                    val last7Days = (0..6).map { LocalDate.now().minusDays(it.toLong()) }
-                    dailyTasks = last7Days.map { date ->
+                    dailyTasks = weekDays.map { (label, date) ->
                         val dateStr = date.format(dateFormatter)
                         val count = tasks.count { it.completed && it.date == dateStr }
-                        DailyMetric(dateStr.take(5), count) // Solo día/mes
-                    }.reversed()
+                        DailyMetric(label, count)
+                    }
                 }
 
-            // Load Pomodoros
             pomodoroRepository.getSessions()
                 .onSuccess { sessions ->
-                    val last7Days = (0..6).map { LocalDate.now().minusDays(it.toLong()) }
-                    dailyPomodoros = last7Days.map { date ->
+                    dailyPomodoros = weekDays.map { (label, date) ->
                         val count = sessions.count { session ->
                             val sessionDate = session.endedAt.toDate().toInstant()
                                 .atZone(ZoneId.systemDefault()).toLocalDate()
                             session.completed && sessionDate == date
                         }
-                        DailyMetric(date.format(dateFormatter).take(5), count)
-                    }.reversed()
+                        DailyMetric(label, count)
+                    }
                 }
         }
+    }
+
+    private fun weekDaysFromMonday(): List<Pair<String, LocalDate>> {
+        val dayLabels = listOf("L", "M", "X", "J", "V", "S", "D")
+        val monday = LocalDate.now().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+        return dayLabels.mapIndexed { i, label -> label to monday.plusDays(i.toLong()) }
     }
 
     private fun getFirstName(fullName: String?): String {

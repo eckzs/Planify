@@ -1,12 +1,20 @@
 package com.app.planify.screens.flashcards
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.HelpOutline
+import androidx.compose.material.icons.outlined.Lightbulb
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.app.planify.components.PlButton
 import com.app.planify.components.PlInput
@@ -47,24 +55,60 @@ fun AddFlashcardScreen(
                 .padding(PlSpacing.lg),
             verticalArrangement = Arrangement.spacedBy(PlSpacing.md)
         ) {
-            Text(
-                "Pregunta",
-                style = PlTypography.labelLarge,
-                color = PlColors.TextHint
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(PlSpacing.xs)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(8.dp)
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(Color(0xFFD4A017))
+                )
+                Icon(
+                    imageVector = Icons.Outlined.HelpOutline,
+                    contentDescription = null,
+                    tint = Color(0xFFD4A017),
+                    modifier = Modifier.size(16.dp)
+                )
+                Text(
+                    "Pregunta",
+                    style = PlTypography.labelLarge,
+                    color = Color(0xFFD4A017),
+                    fontWeight = FontWeight.Bold
+                )
+            }
             PlInput(
                 value = viewModel.front,
                 onValueChange = viewModel::onFrontChange,
                 label = "Concepto o pregunta"
             )
 
-            Spacer(Modifier.height(PlSpacing.xs))
+            Spacer(Modifier.height(PlSpacing.sm))
 
-            Text(
-                "Respuesta",
-                style = PlTypography.labelLarge,
-                color = PlColors.TextHint
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(PlSpacing.xs)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(8.dp)
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(Color(0xFF4CAF50))
+                )
+                Icon(
+                    imageVector = Icons.Outlined.Lightbulb,
+                    contentDescription = null,
+                    tint = Color(0xFF4CAF50),
+                    modifier = Modifier.size(16.dp)
+                )
+                Text(
+                    "Respuesta",
+                    style = PlTypography.labelLarge,
+                    color = Color(0xFF4CAF50),
+                    fontWeight = FontWeight.Bold
+                )
+            }
             PlInput(
                 value = viewModel.back,
                 onValueChange = viewModel::onBackChange,
