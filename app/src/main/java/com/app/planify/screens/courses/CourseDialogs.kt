@@ -32,6 +32,12 @@ fun AddCourseDialog(
                     label = "Nombre del curso"
                 )
                 Spacer(Modifier.height(PlSpacing.md))
+                PlInput(
+                    value = viewModel.teacherName,
+                    onValueChange = viewModel::onTeacherNameChange,
+                    label = "Nombre del profesor"
+                )
+                Spacer(Modifier.height(PlSpacing.md))
                 Text("Color", style = PlTypography.labelLarge)
                 Spacer(Modifier.height(PlSpacing.sm))
                 ColorPicker(selectedColor = viewModel.color, onColorSelect = viewModel::onColorChange)

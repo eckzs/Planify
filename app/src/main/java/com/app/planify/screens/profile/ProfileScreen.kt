@@ -2,33 +2,15 @@ package com.app.planify.screens.profile
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.DarkMode
-import androidx.compose.material.icons.outlined.FormatSize
-import androidx.compose.material.icons.outlined.Info
-import androidx.compose.material.icons.outlined.LightMode
-import androidx.compose.material.icons.outlined.SettingsBrightness
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
-import androidx.compose.material3.Text
-import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material.icons.outlined.*
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -39,12 +21,14 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.app.planify.components.PlButton
 import com.app.planify.components.PlCard
+import com.app.planify.components.PlInput
 import com.app.planify.logic.utils.AppSettings
 import com.app.planify.logic.utils.FontScale
 import com.app.planify.ui.theme.PlColors
 import com.app.planify.ui.theme.PlSpacing
 import com.app.planify.ui.theme.PlTypography
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
     viewModel: ProfileViewModel = viewModel(),
@@ -73,10 +57,81 @@ fun ProfileScreen(
             displayName = viewModel.displayName,
             email = viewModel.email,
             major = viewModel.major,
-            university = viewModel.university
+            university = viewModel.university,
+            onEditClick = viewModel::startEdit
         )
 
         Spacer(Modifier.height(PlSpacing.lg))
+
+        // ── Estadísticas ───────────────────────────────────────────────────
+
+        SectionLabel("Estadísticas")
+        Spacer(Modifier.height(PlSpacing.sm))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(PlSpacing.sm)
+        ) {
+            StatCard(
+                value = "${viewModel.stats.courses}",
+                label = "Cursos",
+                icon = Icons.Outlined.Book,
+                modifier = Modifier.weight(1f)
+            )
+            StatCard(
+                value = "${viewModel.stats.flashcards}",
+                label = "Flashcards",
+                icon = Icons.Outlined.Style,
+                modifier = Modifier.weight(1f)
+            )
+            StatCard(
+                value = "${viewModel.stats.tasksCompleted}",
+                label = "Tareas",
+                icon = Icons.Outlined.CheckCircle,
+                modifier = Modifier.weight(1f)
+            )
+        }
+
+        Spacer(Modifier.height(PlSpacing.lg))
+
+        // ── Cuenta ─────────────────────────────────────────────────────────
+
+        SectionLabel("Cuenta")
+        Spacer(Modifier.height(PlSpacing.sm))
+
+        PlCard(modifier = Modifier.fillMaxWidth()) {
+            AccountRow(
+                icon = Icons.Outlined.Email,
+                label = "Correo",
+                value = viewModel.email.ifBlank { "—" }
+            )
+            if (viewModel.authProvider.isNotBlank()) {
+                HorizontalDivider(
+                    modifier = Modifier.padding(vertical = PlSpacing.sm),
+                    color = PlColors.TextHint.copy(alpha = 0.15f)
+                )
+                AccountRow(
+                    icon = Icons.Outlined.Lock,
+                    label = "Acceso",
+                    value = viewModel.authProvider
+                )
+            }
+            if (viewModel.createdAt.isNotBlank()) {
+                HorizontalDivider(
+                    modifier = Modifier.padding(vertical = PlSpacing.sm),
+                    color = PlColors.TextHint.copy(alpha = 0.15f)
+                )
+                AccountRow(
+                    icon = Icons.Outlined.CalendarMonth,
+                    label = "Miembro desde",
+                    value = viewModel.createdAt
+                )
+            }
+        }
+
+        Spacer(Modifier.height(PlSpacing.lg))
+
+        // ── Apariencia ─────────────────────────────────────────────────────
 
         SectionLabel("Apariencia")
         Spacer(Modifier.height(PlSpacing.sm))
@@ -98,6 +153,8 @@ fun ProfileScreen(
         }
 
         Spacer(Modifier.height(PlSpacing.lg))
+
+        // ── Acerca de ──────────────────────────────────────────────────────
 
         SectionLabel("Acerca de")
         Spacer(Modifier.height(PlSpacing.sm))
@@ -131,7 +188,22 @@ fun ProfileScreen(
 
         Spacer(Modifier.height(PlSpacing.xl))
     }
+
+    // ── Sheet de edición ───────────────────────────────────────────────────
+
+    if (viewModel.isEditing) {
+        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        ModalBottomSheet(
+            onDismissRequest = viewModel::cancelEdit,
+            sheetState = sheetState,
+            containerColor = PlColors.Surface
+        ) {
+            EditProfileSheet(viewModel = viewModel)
+        }
+    }
 }
+
+// ── Componentes ───────────────────────────────────────────────────────────────
 
 @Composable
 private fun SectionLabel(text: String) {
@@ -149,7 +221,8 @@ private fun ProfileHeader(
     displayName: String,
     email: String,
     major: String?,
-    university: String?
+    university: String?,
+    onEditClick: () -> Unit
 ) {
     PlCard(modifier = Modifier.fillMaxWidth()) {
         Row(
@@ -173,7 +246,7 @@ private fun ProfileHeader(
 
             Spacer(Modifier.width(PlSpacing.md))
 
-            Column {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = displayName.ifBlank { "Estudiante" },
                     style = PlTypography.titleMedium,
@@ -192,6 +265,137 @@ private fun ProfileHeader(
                 if (!university.isNullOrBlank()) {
                     Text(university, style = PlTypography.labelSmall, color = PlColors.TextHint)
                 }
+            }
+
+            IconButton(onClick = onEditClick) {
+                Icon(
+                    imageVector = Icons.Outlined.Edit,
+                    contentDescription = "Editar perfil",
+                    tint = PlColors.Primary
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun StatCard(
+    value: String,
+    label: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    modifier: Modifier = Modifier
+) {
+    PlCard(modifier = modifier) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(PlSpacing.xs)
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = PlColors.Primary,
+                modifier = Modifier.size(20.dp)
+            )
+            Text(
+                text = value,
+                style = PlTypography.titleMedium,
+                color = PlColors.TextMain,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = label,
+                style = PlTypography.labelSmall,
+                color = PlColors.TextHint
+            )
+        }
+    }
+}
+
+@Composable
+private fun AccountRow(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    value: String
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = PlColors.Primary,
+                modifier = Modifier.size(20.dp)
+            )
+            Spacer(Modifier.width(PlSpacing.sm))
+            Text(label, style = PlTypography.bodyMedium, color = PlColors.TextMain)
+        }
+        Text(value, style = PlTypography.bodyMedium, color = PlColors.TextHint)
+    }
+}
+
+@Composable
+private fun EditProfileSheet(viewModel: ProfileViewModel) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = PlSpacing.lg)
+            .navigationBarsPadding()
+            .padding(bottom = PlSpacing.lg),
+        verticalArrangement = Arrangement.spacedBy(PlSpacing.md)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(PlSpacing.sm)
+        ) {
+            Icon(Icons.Outlined.Edit, contentDescription = null, tint = PlColors.Primary)
+            Text(
+                "Editar perfil",
+                style = PlTypography.titleMedium,
+                color = PlColors.TextMain,
+                fontWeight = FontWeight.Bold
+            )
+        }
+
+        PlInput(
+            value = viewModel.editName,
+            onValueChange = viewModel::onEditNameChange,
+            label = "Nombre completo"
+        )
+        PlInput(
+            value = viewModel.editMajor,
+            onValueChange = viewModel::onEditMajorChange,
+            label = "Carrera (opcional)"
+        )
+        PlInput(
+            value = viewModel.editUniversity,
+            onValueChange = viewModel::onEditUniversityChange,
+            label = "Universidad (opcional)"
+        )
+
+        viewModel.saveError?.let { err ->
+            Text(err, style = PlTypography.bodyMedium, color = PlColors.Error)
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(PlSpacing.sm)
+        ) {
+            OutlinedButton(
+                onClick = viewModel::cancelEdit,
+                modifier = Modifier.weight(1f)
+            ) {
+                Text("Cancelar", color = PlColors.Primary)
+            }
+            Button(
+                onClick = viewModel::saveEdit,
+                enabled = !viewModel.isSaving,
+                modifier = Modifier.weight(1f),
+                colors = ButtonDefaults.buttonColors(containerColor = PlColors.Primary)
+            ) {
+                Text(if (viewModel.isSaving) "Guardando..." else "Guardar")
             }
         }
     }

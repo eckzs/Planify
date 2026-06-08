@@ -22,6 +22,7 @@ private val navItems = listOf(
     PlNavItem("Home",     Routes.HOME,     Icons.Outlined.Home,         Icons.Filled.Home),
     PlNavItem("Tareas",   Routes.TASKS,    Icons.Outlined.CheckCircle,  Icons.Filled.CheckCircle),
     PlNavItem("Cursos",   Routes.COURSES,  Icons.Outlined.Book,         Icons.Filled.Book),
+    PlNavItem("AI",       Routes.AI_CHAT,  Icons.Outlined.AutoAwesome,  Icons.Filled.AutoAwesome),
     PlNavItem("Perfil",   Routes.PROFILE,  Icons.Outlined.Person,       Icons.Filled.Person),
 )
 

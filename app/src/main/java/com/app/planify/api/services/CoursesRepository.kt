@@ -33,7 +33,7 @@ class CoursesRepository constructor() {
             }
     }
 
-    suspend fun createCourse(name: String, color: String): Result<Unit> = suspendCancellableCoroutine { continuation ->
+    suspend fun createCourse(name: String, teacherName: String, color: String): Result<Unit> = suspendCancellableCoroutine { continuation ->
         val userId = firebaseAuth.currentUser?.uid
 
         if (userId == null) {
@@ -43,6 +43,7 @@ class CoursesRepository constructor() {
 
         val course = Course(
             name = name.trim(),
+            teacherName = teacherName.trim(),
             color = color,
             userId = userId
         )

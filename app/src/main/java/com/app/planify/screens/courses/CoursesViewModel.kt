@@ -17,6 +17,9 @@ class CoursesViewModel : ViewModel() {
     var name by mutableStateOf("")
         private set
 
+    var teacherName by mutableStateOf("")
+        private set
+
     var color by mutableStateOf("#4285F4") // Color por defecto
         private set
 
@@ -26,6 +29,10 @@ class CoursesViewModel : ViewModel() {
 
     fun onNameChange(value: String) {
         name = value
+    }
+
+    fun onTeacherNameChange(value: String) {
+        teacherName = value
     }
 
     fun onColorChange(value: String) {
@@ -44,9 +51,10 @@ class CoursesViewModel : ViewModel() {
     fun createCourse(onSuccess: () -> Unit) {
         viewModelScope.launch {
             if (name.isBlank()) return@launch
-            coursesRepository.createCourse(name, color)
+            coursesRepository.createCourse(name, teacherName, color)
                 .onSuccess {
                     name = ""
+                    teacherName = ""
                     loadCourses()
                     onSuccess()
                 }

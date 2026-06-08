@@ -19,6 +19,7 @@ import com.app.planify.components.PlBottomBar
 import com.app.planify.constants.Routes
 import com.app.planify.logic.utils.EmailLinkAuthHandler
 import com.app.planify.logic.utils.EmailLinkState
+import com.app.planify.screens.ai.AiChatScreen
 import com.app.planify.screens.auth.AuthScreen
 import com.app.planify.screens.auth.OnboardingScreen
 import com.app.planify.screens.home.HomeScreen
@@ -31,11 +32,11 @@ import com.google.firebase.auth.FirebaseAuth
 import com.app.planify.screens.courses.CoursesScreen
 import com.app.planify.screens.flashcards.AddFlashcardScreen
 import com.app.planify.screens.flashcards.FlashcardsScreen
+import com.app.planify.screens.flashcards.GenerateFlashcardsScreen
 import com.app.planify.screens.profile.ProfileScreen
 
 @Composable
 fun AppNavigation() {
-// ... (rest of imports and setup stays same)
     val navController = rememberNavController()
     val context = LocalContext.current
     val backStackEntry by navController.currentBackStackEntryAsState()
@@ -45,7 +46,7 @@ fun AppNavigation() {
     val currentUser = FirebaseAuth.getInstance().currentUser
     val startDestination = if (currentUser != null) Routes.HOME else Routes.AUTH
 
-    val bottomBarRoutes = setOf(Routes.HOME, Routes.TASKS, Routes.COURSES, Routes.PROFILE)
+    val bottomBarRoutes = setOf(Routes.HOME, Routes.TASKS, Routes.COURSES, Routes.AI_CHAT, Routes.PROFILE)
     val showBottomBar = currentRoute in bottomBarRoutes
 
     LaunchedEffect(emailLinkState) {
@@ -192,17 +193,8 @@ fun AppNavigation() {
                 FlashcardsScreen(
                     courseId = courseId,
                     onNavigateBack = { navController.popBackStack() },
-                    onNavigateToAdd = { navController.navigate(Routes.addFlashcard(courseId)) }
-                )
-            }
-
-            composable(Routes.PROFILE) {
-                ProfileScreen(
-                    onNavigateToAuth = {
-                        navController.navigate(Routes.AUTH) {
-                            popUpTo(0) { inclusive = true }
-                        }
-                    }
+                    onNavigateToAdd = { navController.navigate(Routes.addFlashcard(courseId)) },
+                    onNavigateToGenerate = { navController.navigate(Routes.generateFlashcards(courseId)) }
                 )
             }
 
@@ -216,6 +208,37 @@ fun AppNavigation() {
                 AddFlashcardScreen(
                     courseId = courseId,
                     onNavigateBack = { navController.popBackStack() }
+                )
+            }
+
+            composable(
+                route = Routes.GENERATE_FLASHCARDS,
+                arguments = listOf(navArgument("courseId") { type = NavType.StringType })
+            ) { backStack ->
+                val courseId = android.net.Uri.decode(
+                    backStack.arguments?.getString("courseId") ?: ""
+                )
+                GenerateFlashcardsScreen(
+                    courseId = courseId,
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
+
+            // ── AI ──────────────────────────────────────────────────────────
+
+            composable(Routes.AI_CHAT) {
+                AiChatScreen()
+            }
+
+            // ── Profile ──────────────────────────────────────────────────────
+
+            composable(Routes.PROFILE) {
+                ProfileScreen(
+                    onNavigateToAuth = {
+                        navController.navigate(Routes.AUTH) {
+                            popUpTo(0) { inclusive = true }
+                        }
+                    }
                 )
             }
         }

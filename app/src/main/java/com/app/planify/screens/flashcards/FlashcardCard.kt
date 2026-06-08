@@ -7,6 +7,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.HelpOutline
 import androidx.compose.material.icons.outlined.Lightbulb
 import androidx.compose.material3.Card
@@ -14,6 +15,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -54,7 +56,8 @@ fun StudyContent(
     card: Flashcard,
     isFlipped: Boolean,
     onFlip: () -> Unit,
-    onResult: (Int) -> Unit
+    onResult: (Int) -> Unit,
+    onExplainClick: () -> Unit = {}
 ) {
     val rotation by animateFloatAsState(
         targetValue = if (isFlipped) 180f else 0f,
@@ -93,6 +96,24 @@ fun StudyContent(
 
         if (isFlipped) {
             RatingButtons(onResult = onResult)
+            Spacer(Modifier.height(PlSpacing.sm))
+            TextButton(
+                onClick = onExplainClick,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(
+                    Icons.Outlined.AutoAwesome,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                    tint = PlColors.Primary
+                )
+                Spacer(Modifier.width(PlSpacing.xs))
+                Text(
+                    "¿Por qué es esto?",
+                    style = PlTypography.labelMedium,
+                    color = PlColors.Primary
+                )
+            }
         } else {
             Text(
                 "Toca la carta para ver la respuesta",
