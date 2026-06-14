@@ -33,6 +33,22 @@ class CoursesRepository constructor() {
             }
     }
 
+    suspend fun getCourseById(courseId: String): Result<Course> = suspendCancellableCoroutine { continuation ->
+        coursesCollection
+            .document(courseId)
+            .get()
+            .addOnSuccessListener { document ->
+                if (document.exists()) {
+                    continuation.resume(Result.success(Course.fromDocument(document)))
+                } else {
+                    continuation.resume(Result.failure(Exception("Curso no encontrado")))
+                }
+            }
+            .addOnFailureListener { exception ->
+                continuation.resume(Result.failure(exception))
+            }
+    }
+
     suspend fun createCourse(name: String, teacherName: String, color: String): Result<Unit> = suspendCancellableCoroutine { continuation ->
         val userId = firebaseAuth.currentUser?.uid
 

@@ -116,7 +116,7 @@ class AiChatViewModel : ViewModel() {
         } ?: return "No encontré el curso \"$courseName\". " +
             "Tus cursos son: ${courses.joinToString(", ") { it.name }}."
 
-        return aiRepository.generateFlashcards(topic, count).fold(
+        return aiRepository.generateFlashcards(course.name, topic, count).fold(
             onSuccess = { cards ->
                 for (card in cards) {
                     flashcardsRepository.createCard(course.id, card.front, card.back)
@@ -150,7 +150,7 @@ class AiChatViewModel : ViewModel() {
         isGeneratingFromSheet = true
 
         viewModelScope.launch {
-            aiRepository.generateFlashcards(topic, sheetCount)
+            aiRepository.generateFlashcards(course.name, topic, sheetCount)
                 .onSuccess { cards ->
                     for (card in cards) {
                         flashcardsRepository.createCard(course.id, card.front, card.back)

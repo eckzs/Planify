@@ -27,6 +27,10 @@ fun GenerateFlashcardsScreen(
     viewModel: GenerateFlashcardsViewModel = viewModel(),
     onNavigateBack: () -> Unit = {}
 ) {
+    LaunchedEffect(courseId) {
+        viewModel.loadCourse(courseId)
+    }
+
     Scaffold(
         topBar = {
             Row(

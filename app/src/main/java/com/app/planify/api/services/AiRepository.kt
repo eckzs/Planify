@@ -1,9 +1,9 @@
 package com.app.planify.api.services
 
+import android.util.Log
 import com.app.planify.api.client.GeminiClient
 import com.app.planify.api.models.ChatMessage
 import com.app.planify.api.models.GeneratedFlashcard
-import com.google.ai.client.generativeai.type.FunctionCallPart
 import com.google.ai.client.generativeai.type.FunctionResponsePart
 import com.google.ai.client.generativeai.type.content
 import org.json.JSONArray
@@ -40,21 +40,21 @@ class AiRepository {
         var response = chat.sendMessage(newMessage)
 
         // Manejar function call si Gemini decide usar la herramienta
-        val functionCall = response.candidates
-            .firstOrNull()?.content?.parts
-            ?.filterIsInstance<FunctionCallPart>()
-            ?.firstOrNull()
+        val functionCall = response.functionCalls.firstOrNull()
 
         if (functionCall != null) {
 
-            // Extraer args como strings simples (JsonElement.toString() da "value" con comillas para strings)
-            val args = functionCall.args.mapValues { (_, v) -> v.toString().trim('"') }
+            // Extraer args como strings simples
+            val args = functionCall.args.mapValues { (_, v) -> v.toString() }
 
             val functionResult = onFunctionCall(functionCall.name, args)
 
             // Enviar el resultado de vuelta a Gemini para que genere la respuesta final
             val functionResponseContent = content(role = "function") {
-                part(FunctionResponsePart(functionCall.name, JSONObject(mapOf("result" to functionResult))))
+                part(FunctionResponsePart(
+                    name = functionCall.name,
+                    response = JSONObject(mapOf("result" to functionResult))
+                ))
             }
             response = chat.sendMessage(functionResponseContent)
         }
@@ -83,23 +83,28 @@ class AiRepository {
         Result.failure(Exception(e.message ?: "Error desconocido"))
     }
 
-    suspend fun generateFlashcards(topic: String, count: Int): Result<List<GeneratedFlashcard>> = try {
+    suspend fun generateFlashcards(courseName: String, topic: String, count: Int): Result<List<GeneratedFlashcard>> = try {
         val prompt = """
-            Genera exactamente $count tarjetas de estudio sobre el siguiente tema o texto:
-
-            "$topic"
-
-            Responde ÚNICAMENTE con un JSON array válido, sin texto adicional, sin markdown, sin bloques de código. Formato exacto:
-            [{"front":"pregunta","back":"respuesta"},{"front":"...","back":"..."}]
+            Genera exactamente $count tarjetas de estudio para el curso "$courseName".
+            Tema o contenido: "$topic"
 
             Las preguntas deben ser concisas. Las respuestas deben ser claras, máximo 2 oraciones.
         """.trimIndent()
 
-        val response = GeminiClient.model.generateContent(prompt)
+        val response = GeminiClient.flashcardModel.generateContent(prompt)
         val rawText = response.text?.trim() ?: return Result.failure(Exception("Respuesta vacía"))
 
-        val jsonText = rawText.removePrefix("```json").removePrefix("```").removeSuffix("```").trim()
-        val jsonArray = JSONArray(jsonText)
+        // Limpieza de Markdown si Gemini incluye bloques ```json ... ```
+        val cleanedJson = rawText
+            .removePrefix("```json")
+            .removePrefix("```")
+            .removeSuffix("```")
+            .trim()
+
+        Log.d("AiRepository", "Raw Response: $rawText")
+        Log.d("AiRepository", "Cleaned JSON: $cleanedJson")
+
+        val jsonArray = JSONArray(cleanedJson)
         val cards = (0 until jsonArray.length()).map { i ->
             val obj = jsonArray.getJSONObject(i)
             GeneratedFlashcard(front = obj.getString("front"), back = obj.getString("back"))
@@ -108,6 +113,7 @@ class AiRepository {
     } catch (e: IOException) {
         Result.failure(Exception("Sin conexión a internet"))
     } catch (e: Exception) {
-        Result.failure(Exception("Error al generar tarjetas: ${e.message}"))
+        Log.e("AiRepository", "Error parsing flashcards JSON", e)
+        Result.failure(Exception("Error al generar tarjetas: Formato inválido"))
     }
 }

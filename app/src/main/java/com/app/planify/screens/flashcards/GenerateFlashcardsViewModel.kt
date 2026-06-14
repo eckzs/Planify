@@ -10,10 +10,17 @@ import com.app.planify.api.services.AiRepository
 import com.app.planify.api.services.FlashcardsRepository
 import kotlinx.coroutines.launch
 
+import com.app.planify.api.services.CoursesRepository
+import kotlinx.coroutines.launch
+
 class GenerateFlashcardsViewModel : ViewModel() {
 
     private val aiRepository = AiRepository()
     private val flashcardsRepository = FlashcardsRepository()
+    private val coursesRepository = CoursesRepository()
+
+    var courseName by mutableStateOf("")
+        private set
 
     var inputText by mutableStateOf("")
         private set
@@ -33,6 +40,14 @@ class GenerateFlashcardsViewModel : ViewModel() {
     var error by mutableStateOf<String?>(null)
         private set
 
+    fun loadCourse(courseId: String) {
+        viewModelScope.launch {
+            coursesRepository.getCourseById(courseId).onSuccess {
+                courseName = it.name
+            }
+        }
+    }
+
     fun onInputChange(text: String) { inputText = text }
 
     fun onCountChange(count: Int) { selectedCount = count }
@@ -47,7 +62,7 @@ class GenerateFlashcardsViewModel : ViewModel() {
         generatedCards = emptyList()
 
         viewModelScope.launch {
-            aiRepository.generateFlashcards(inputText, selectedCount)
+            aiRepository.generateFlashcards(courseName, inputText, selectedCount)
                 .onSuccess { cards ->
                     generatedCards = cards
                     isGenerating = false
