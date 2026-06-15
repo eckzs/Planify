@@ -44,6 +44,9 @@ class TasksViewModel : ViewModel() {
     var selectedDate by mutableStateOf(LocalDate.now())
         private set
 
+    var showAllTasks by mutableStateOf(false)
+        private set
+
     val dates: List<LocalDate> = run {
         val startOfYear = LocalDate.now().withDayOfYear(1)
         val endOfYear = LocalDate.now().withDayOfYear(LocalDate.now().lengthOfYear())
@@ -60,14 +63,23 @@ class TasksViewModel : ViewModel() {
         loadTasks()
     }
 
+    fun onShowAllTasksChange(value: Boolean) {
+        showAllTasks = value
+        loadTasks()
+    }
+
     fun loadTasks() {
         viewModelScope.launch {
             state = TasksState.Loading
 
             tasksRepository.getTasks()
                 .onSuccess { allTasks ->
-                    val filteredTasks = allTasks.filter { task ->
-                        task.date == selectedDate.format(dateFormatter)
+                    val filteredTasks = if (showAllTasks) {
+                        allTasks
+                    } else {
+                        allTasks.filter { task ->
+                            task.date == selectedDate.format(dateFormatter)
+                        }
                     }
                     state = TasksState.Success(filteredTasks)
                 }

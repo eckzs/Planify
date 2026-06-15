@@ -1,14 +1,17 @@
 package com.app.planify.screens.tasks
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -47,7 +50,9 @@ fun TasksScreen(
             TasksHeader(
                 selectedDate = viewModel.selectedDate,
                 dates = viewModel.dates,
-                onDateSelected = viewModel::onDateSelected
+                onDateSelected = viewModel::onDateSelected,
+                showAllTasks = viewModel.showAllTasks,
+                onShowAllTasksChange = viewModel::onShowAllTasksChange
             )
             when (state) {
                 is TasksState.Loading -> PlLoader()
@@ -102,7 +107,9 @@ fun TasksScreen(
 private fun TasksHeader(
     selectedDate: LocalDate,
     dates: List<LocalDate>,
-    onDateSelected: (LocalDate) -> Unit
+    onDateSelected: (LocalDate) -> Unit,
+    showAllTasks: Boolean,
+    onShowAllTasksChange: (Boolean) -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -117,10 +124,29 @@ private fun TasksHeader(
         )
         Spacer(Modifier.height(PlSpacing.md))
 
-        DateSelector(
-            selectedDate = selectedDate,
-            dates = dates,
-            onDateSelected = onDateSelected
-        )
+        Row(
+            modifier = Modifier.padding(horizontal = PlSpacing.lg),
+            horizontalArrangement = Arrangement.spacedBy(PlSpacing.sm)
+        ) {
+            FilterChip(
+                selected = !showAllTasks,
+                onClick = { onShowAllTasksChange(false) },
+                label = { Text("Por día", style = PlTypography.labelMedium) }
+            )
+            FilterChip(
+                selected = showAllTasks,
+                onClick = { onShowAllTasksChange(true) },
+                label = { Text("Todas", style = PlTypography.labelMedium) }
+            )
+        }
+
+        if (!showAllTasks) {
+            Spacer(Modifier.height(PlSpacing.sm))
+            DateSelector(
+                selectedDate = selectedDate,
+                dates = dates,
+                onDateSelected = onDateSelected
+            )
+        }
     }
 }
