@@ -1,14 +1,8 @@
 package com.app.planify.components
 
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Timer
-import androidx.compose.material.icons.outlined.CheckCircle
-import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.outlined.Person
-import androidx.compose.material.icons.outlined.Timer
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
@@ -24,18 +18,12 @@ import com.app.planify.constants.Routes
 import com.app.planify.ui.theme.PlColors
 import com.app.planify.ui.theme.PlTypography
 
-private data class PlNavItem(
-    val label: String,
-    val route: String,
-    val icon: ImageVector,
-    val selectedIcon: ImageVector
-)
-
 private val navItems = listOf(
-    PlNavItem("Home",     "home",     Icons.Outlined.Home,         Icons.Filled.Home),
-    PlNavItem("Tasks",    "tasks",    Icons.Outlined.CheckCircle,  Icons.Filled.CheckCircle),
-    PlNavItem("Pomodoro", "pomodoro", Icons.Outlined.Timer,        Icons.Filled.Timer),
-    PlNavItem("Profile",  "profile",  Icons.Outlined.Person,       Icons.Filled.Person),
+    PlNavItem("Home",     Routes.HOME,     Icons.Outlined.Home,         Icons.Filled.Home),
+    PlNavItem("Tareas",   Routes.TASKS,    Icons.Outlined.CheckCircle,  Icons.Filled.CheckCircle),
+    PlNavItem("Cursos",   Routes.COURSES,  Icons.Outlined.Book,         Icons.Filled.Book),
+    PlNavItem("AI",       Routes.AI_CHAT,  Icons.Outlined.AutoAwesome,  Icons.Filled.AutoAwesome),
+    PlNavItem("Perfil",   Routes.PROFILE,  Icons.Outlined.Person,       Icons.Filled.Person),
 )
 
 @Composable
@@ -57,10 +45,12 @@ fun PlBottomBar(
                 onClick = {
                     if (!selected) {
                         navController.navigate(item.route) {
-                            // Always pop back to Home (without saving state)
-                            // so any tab click clears the stack above Home first
-                            popUpTo(Routes.HOME) { inclusive = false }
+                            popUpTo(Routes.HOME) {
+                                inclusive = false
+                                saveState = true
+                            }
                             launchSingleTop = true
+                            restoreState = true
                         }
                     }
                 },

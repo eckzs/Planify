@@ -105,13 +105,48 @@ class PomodoroRepository {
             completed = completed
         )
 
-        // Actualizamos el MISMO documento del usuario en lugar de crear uno nuevo
-        // Esto consolida todos los campos en un solo documento en la colección 'pomodoro'
+        // Guardamos cada sesión como un documento nuevo en una subcolección
+        // Esto permite tener un historial completo para las gráficas
         pomodoroCollection
             .document(userId)
-            .set(session.toMap(), SetOptions.merge())
+            .collection(PomodoroConstants.SESSIONS_COLLECTION)
+            .add(session.toMap())
             .addOnSuccessListener {
                 continuation.resume(Result.success(Unit))
+            }
+            .addOnFailureListener { exception ->
+                continuation.resume(Result.failure(exception))
+            }
+    }
+
+    suspend fun getSessions(): Result<List<PomodoroSession>> = suspendCancellableCoroutine { continuation ->
+        val userId = firebaseAuth.currentUser?.uid
+
+        if (userId == null) {
+            continuation.resume(Result.failure(Exception("No hay usuario autenticado")))
+            return@suspendCancellableCoroutine
+        }
+
+        pomodoroCollection
+            .document(userId)
+            .collection(PomodoroConstants.SESSIONS_COLLECTION)
+            .get()
+            .addOnSuccessListener { snapshot ->
+                val sessions = snapshot.documents.mapNotNull { doc ->
+                    try {
+                        PomodoroSession(
+                            userId = doc.getString(PomodoroConstants.FIELD_USER_ID).orEmpty(),
+                            taskId = doc.getString(PomodoroConstants.FIELD_TASK_ID).orEmpty(),
+                            mode = doc.getString(PomodoroConstants.FIELD_MODE).orEmpty(),
+                            cycleNumber = doc.getLong(PomodoroConstants.FIELD_CYCLE_NUMBER)?.toInt() ?: 0,
+                            startedAt = doc.getTimestamp(PomodoroConstants.FIELD_STARTED_AT) ?: Timestamp.now(),
+                            endedAt = doc.getTimestamp(PomodoroConstants.FIELD_ENDED_AT) ?: Timestamp.now(),
+                            duration = doc.getDouble(PomodoroConstants.FIELD_DURATION) ?: 0.0,
+                            completed = doc.getBoolean(PomodoroConstants.FIELD_COMPLETED) ?: false
+                        )
+                    } catch (e: Exception) { null }
+                }
+                continuation.resume(Result.success(sessions))
             }
             .addOnFailureListener { exception ->
                 continuation.resume(Result.failure(exception))

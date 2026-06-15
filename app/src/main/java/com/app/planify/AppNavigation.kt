@@ -19,14 +19,21 @@ import com.app.planify.components.PlBottomBar
 import com.app.planify.constants.Routes
 import com.app.planify.logic.utils.EmailLinkAuthHandler
 import com.app.planify.logic.utils.EmailLinkState
+import com.app.planify.screens.ai.AiChatScreen
 import com.app.planify.screens.auth.AuthScreen
 import com.app.planify.screens.auth.OnboardingScreen
 import com.app.planify.screens.home.HomeScreen
 import com.app.planify.screens.tasks.AddTaskScreen
 import com.app.planify.screens.pomodoro.PomodoroScreen
-// TODO: uncomment when feat/profile is merged
-// import com.app.planify.screens.profile.ProfileScreen
 import com.app.planify.screens.tasks.TasksScreen
+import com.app.planify.screens.tasks.TasksViewModel
+import com.google.firebase.auth.FirebaseAuth
+
+import com.app.planify.screens.courses.CoursesScreen
+import com.app.planify.screens.flashcards.AddFlashcardScreen
+import com.app.planify.screens.flashcards.FlashcardsScreen
+import com.app.planify.screens.flashcards.GenerateFlashcardsScreen
+import com.app.planify.screens.profile.ProfileScreen
 
 @Composable
 fun AppNavigation() {
@@ -36,9 +43,24 @@ fun AppNavigation() {
     val currentRoute = backStackEntry?.destination?.route
     val emailLinkState by EmailLinkAuthHandler.state.collectAsState()
 
-    // TODO: add Routes.PROFILE when its feature is merged
-    val bottomBarRoutes = setOf(Routes.HOME, Routes.TASKS, Routes.POMODORO)
+    val currentUser = FirebaseAuth.getInstance().currentUser
+    val startDestination = if (currentUser != null) Routes.HOME else Routes.AUTH
+
+    val bottomBarRoutes = setOf(Routes.HOME, Routes.TASKS, Routes.COURSES, Routes.AI_CHAT, Routes.PROFILE)
     val showBottomBar = currentRoute in bottomBarRoutes
+
+    // Navega a una pestaña principal con las MISMAS opciones que el bottom bar,
+    // para que el estado del back stack quede consistente entre atajos y barra.
+    val navigateToTab: (String) -> Unit = { route ->
+        navController.navigate(route) {
+            popUpTo(Routes.HOME) {
+                inclusive = false
+                saveState = true
+            }
+            launchSingleTop = true
+            restoreState = true
+        }
+    }
 
     LaunchedEffect(emailLinkState) {
         when (val state = emailLinkState) {
@@ -66,7 +88,7 @@ fun AppNavigation() {
     ) { innerPadding ->
         NavHost(
             navController = navController,
-            startDestination = Routes.AUTH,
+            startDestination = startDestination,
             modifier = Modifier.padding(innerPadding)
         ) {
 
@@ -97,18 +119,34 @@ fun AppNavigation() {
 
             composable(Routes.HOME) {
                 HomeScreen(
-                    onNavigateToTasks    = { navController.navigate(Routes.TASKS) },
-                    onNavigateToPomodoro = { navController.navigate(Routes.POMODORO) }
+                    onNavigateToTasks    = { navigateToTab(Routes.TASKS) },
+                    onNavigateToPomodoro = { navController.navigate(Routes.POMODORO) },
+                    onNavigateToCourses  = { navigateToTab(Routes.COURSES) },
+                    onNavigateToAi       = { navigateToTab(Routes.AI_CHAT) }
                 )
             }
 
-            composable(Routes.TASKS) {
+            composable(Routes.TASKS) { entry ->
+                val taskChanged = entry.savedStateHandle.get<Boolean>("task_changed") == true
+                val tasksViewModel: TasksViewModel = androidx.lifecycle.viewmodel.compose.viewModel(entry)
+
+                LaunchedEffect(taskChanged) {
+                    if (taskChanged) {
+                        tasksViewModel.loadTasks()
+                        entry.savedStateHandle["task_changed"] = false
+                    }
+                }
+
                 TasksScreen(
+                    viewModel = tasksViewModel,
                     onNavigateToAdd = {
                         navController.navigate(Routes.ADD_TASK)
                     },
                     onNavigateToEdit = { taskId ->
                         navController.navigate(Routes.taskDetail(taskId))
+                    },
+                    onNavigateToPomodoro = { taskId ->
+                        navController.navigate(Routes.pomodoro(taskId))
                     }
                 )
             }
@@ -116,6 +154,8 @@ fun AppNavigation() {
             composable(Routes.ADD_TASK) {
                 AddTaskScreen(
                     onNavigateBack = {
+                        navController.previousBackStackEntry
+                            ?.savedStateHandle?.set("task_changed", true)
                         navController.popBackStack()
                     }
                 )
@@ -132,6 +172,8 @@ fun AppNavigation() {
                 AddTaskScreen(
                     taskId = taskId,
                     onNavigateBack = {
+                        navController.previousBackStackEntry
+                            ?.savedStateHandle?.set("task_changed", true)
                         navController.popBackStack()
                     }
                 )
@@ -141,8 +183,79 @@ fun AppNavigation() {
                 PomodoroScreen()
             }
 
-            // TODO: temporary — enable when feat/profile is merged
-            // composable(Routes.PROFILE) { ProfileScreen() }
+            composable(Routes.POMODORO_WITH_TASK, arguments = listOf(navArgument("taskId") { type = NavType.StringType })) { backStack ->
+                val taskId = android.net.Uri.decode(backStack.arguments?.getString("taskId") ?: "")
+                PomodoroScreen(taskId = taskId)
+            }
+
+            // ── Study Toolkit ──────────────────────────────────────────────────
+
+            composable(Routes.COURSES) {
+                CoursesScreen(
+                    onNavigateToCourseDetail = { courseId ->
+                        navController.navigate(Routes.flashcards(courseId))
+                    }
+                )
+            }
+
+            composable(
+                route = Routes.FLASHCARDS_STUDY,
+                arguments = listOf(navArgument("courseId") { type = NavType.StringType })
+            ) { backStack ->
+                val courseId = android.net.Uri.decode(
+                    backStack.arguments?.getString("courseId") ?: ""
+                )
+                FlashcardsScreen(
+                    courseId = courseId,
+                    onNavigateBack = { navController.popBackStack() },
+                    onNavigateToAdd = { navController.navigate(Routes.addFlashcard(courseId)) },
+                    onNavigateToGenerate = { navController.navigate(Routes.generateFlashcards(courseId)) }
+                )
+            }
+
+            composable(
+                route = Routes.ADD_FLASHCARD,
+                arguments = listOf(navArgument("courseId") { type = NavType.StringType })
+            ) { backStack ->
+                val courseId = android.net.Uri.decode(
+                    backStack.arguments?.getString("courseId") ?: ""
+                )
+                AddFlashcardScreen(
+                    courseId = courseId,
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
+
+            composable(
+                route = Routes.GENERATE_FLASHCARDS,
+                arguments = listOf(navArgument("courseId") { type = NavType.StringType })
+            ) { backStack ->
+                val courseId = android.net.Uri.decode(
+                    backStack.arguments?.getString("courseId") ?: ""
+                )
+                GenerateFlashcardsScreen(
+                    courseId = courseId,
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
+
+            // ── AI ──────────────────────────────────────────────────────────
+
+            composable(Routes.AI_CHAT) {
+                AiChatScreen()
+            }
+
+            // ── Profile ──────────────────────────────────────────────────────
+
+            composable(Routes.PROFILE) {
+                ProfileScreen(
+                    onNavigateToAuth = {
+                        navController.navigate(Routes.AUTH) {
+                            popUpTo(0) { inclusive = true }
+                        }
+                    }
+                )
+            }
         }
     }
 }

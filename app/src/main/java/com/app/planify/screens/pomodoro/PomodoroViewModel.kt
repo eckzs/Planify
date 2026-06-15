@@ -9,6 +9,7 @@ import com.app.planify.api.models.Task
 import com.app.planify.api.services.PomodoroRepository
 import com.app.planify.api.services.TasksRepository
 import com.app.planify.constants.PomodoroConstants
+import com.app.planify.logic.utils.PomodoroState
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -18,12 +19,6 @@ class PomodoroViewModel : ViewModel() {
     private val tasksRepository = TasksRepository()
     private val pomodoroRepository = PomodoroRepository()
     private var timerJob: Job? = null
-
-    var tasks by mutableStateOf(emptyList<Task>())
-        private set
-
-    var selectedTask by mutableStateOf<Task?>(null)
-        private set
 
     var associatedTask by mutableStateOf<Task?>(null)
         private set
@@ -46,36 +41,30 @@ class PomodoroViewModel : ViewModel() {
     var isPaused by mutableStateOf(false)
         private set
 
+    var progress by mutableStateOf(1f)
+        private set
+
     var errorMessage by mutableStateOf<String?>(null)
         private set
 
     private var phaseStartedAtMillis: Long = 0L
     private var phaseEndsAtMillis: Long = 0L
 
-    init {
-        loadTasks()
-    }
+    fun loadTaskById(taskId: String) {
+        if (PomodoroState.isRunning && PomodoroState.activeTaskId != taskId) {
+            stopPomodoro()
+        }
 
-    fun loadTasks() {
         viewModelScope.launch {
-            tasksRepository.getTasks()
-                .onSuccess { taskList ->
-                    tasks = taskList
-                    selectedTask = selectedTask ?: taskList.firstOrNull()
+            tasksRepository.getTask(taskId)
+                .onSuccess { task ->
+                    associatedTask = task
+                    if (!isRunning && !isPaused) resetTimer()
                 }
                 .onFailure {
-                    errorMessage = it.message ?: "No se pudieron cargar las tareas"
+                    errorMessage = it.message ?: "No se pudo cargar la tarea"
                 }
         }
-    }
-
-    fun onTaskSelected(task: Task) {
-        selectedTask = task
-    }
-
-    fun associateSelectedTask() {
-        associatedTask = selectedTask
-        errorMessage = null
     }
 
     fun onTotalCyclesChange(value: String) {
@@ -84,13 +73,7 @@ class PomodoroViewModel : ViewModel() {
     }
 
     fun startPomodoro() {
-        val task = associatedTask
-
-        if (task == null) {
-            errorMessage = "Selecciona y asocia una tarea primero"
-            return
-        }
-
+        val task = associatedTask ?: return
         cycleNumber = 1
         startPhase(PomodoroConstants.MODE_FOCUS)
     }
@@ -99,6 +82,7 @@ class PomodoroViewModel : ViewModel() {
         timerJob?.cancel()
         isRunning = false
         isPaused = true
+        PomodoroState.isRunning = false
 
         viewModelScope.launch {
             pomodoroRepository.updatePaused(true)
@@ -139,7 +123,6 @@ class PomodoroViewModel : ViewModel() {
 
         if (task != null && phaseStartedAtMillis > 0L) {
             viewModelScope.launch {
-                // Guardamos solo la sesión en la colección 'pomodoro'
                 pomodoroRepository.savePomodoroSession(
                     taskId = task.id,
                     mode = mode,
@@ -158,11 +141,14 @@ class PomodoroViewModel : ViewModel() {
         val task = associatedTask ?: return
         mode = newMode
         remainingSeconds = secondsForMode(newMode)
+        progress = 1f
         phaseStartedAtMillis = System.currentTimeMillis()
         phaseEndsAtMillis = phaseStartedAtMillis + remainingSeconds * 1000L
         isRunning = true
         isPaused = false
         errorMessage = null
+        PomodoroState.isRunning = true
+        PomodoroState.activeTaskId = task.id
 
         viewModelScope.launch {
             pomodoroRepository.saveActivePomodoro(
@@ -184,14 +170,19 @@ class PomodoroViewModel : ViewModel() {
 
     private fun startTimer() {
         timerJob?.cancel()
+        val totalSeconds = secondsForMode(mode)
         timerJob = viewModelScope.launch {
-            while (remainingSeconds > 0 && isRunning) {
-                delay(1000)
-                remainingSeconds--
-            }
+            while (isRunning) {
+                val now = System.currentTimeMillis()
+                val remaining = ((phaseEndsAtMillis - now) / 1000).toInt().coerceAtLeast(0)
+                remainingSeconds = remaining
+                progress = remaining.toFloat() / totalSeconds.toFloat()
 
-            if (remainingSeconds == 0 && isRunning) {
-                completeCurrentPhase()
+                if (remaining <= 0) {
+                    completeCurrentPhase()
+                    break
+                }
+                delay(1000)
             }
         }
     }
@@ -242,6 +233,8 @@ class PomodoroViewModel : ViewModel() {
         remainingSeconds = focusSeconds()
         phaseStartedAtMillis = 0L
         phaseEndsAtMillis = 0L
+        PomodoroState.isRunning = false
+        PomodoroState.activeTaskId = null
     }
 
     private fun secondsForMode(mode: String): Int {

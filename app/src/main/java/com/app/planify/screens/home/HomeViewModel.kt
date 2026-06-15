@@ -10,11 +10,20 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.launch
 
+import com.app.planify.api.services.PomodoroRepository
+import java.time.DayOfWeek
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.time.temporal.TemporalAdjusters
+import java.time.ZoneId
+
 class HomeViewModel : ViewModel() {
 
     private val firebaseAuth = FirebaseAuth.getInstance()
     private val firestore = FirebaseFirestore.getInstance()
     private val tasksRepository = TasksRepository()
+    private val pomodoroRepository = PomodoroRepository()
+    private val dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
 
     var userName by mutableStateOf("Estudiante")
         private set
@@ -25,9 +34,15 @@ class HomeViewModel : ViewModel() {
     var recentTasks by mutableStateOf(emptyList<String>())
         private set
 
+    var dailyPomodoros by mutableStateOf(emptyList<DailyMetric>())
+        private set
+
+    var dailyTasks by mutableStateOf(emptyList<DailyMetric>())
+        private set
+
     init {
         loadUserName()
-        loadTasksSummary()
+        loadData()
     }
 
     private fun loadUserName() {
@@ -39,32 +54,57 @@ class HomeViewModel : ViewModel() {
             return
         }
 
+        // Primero intentamos con el nombre de Firebase Auth si existe
+        if (!user.displayName.isNullOrBlank()) {
+            userName = getFirstName(user.displayName)
+        }
+
+        // Luego intentamos obtener el nombre personalizado de Firestore
         firestore.collection("users")
             .document(userId)
             .get()
             .addOnSuccessListener { document ->
                 val savedName = document.getString("name")
-                userName = getFirstName(savedName ?: user.displayName)
-            }
-            .addOnFailureListener {
-                userName = getFirstName(user.displayName)
+                if (!savedName.isNullOrBlank()) {
+                    userName = getFirstName(savedName)
+                }
             }
     }
 
-    private fun loadTasksSummary() {
+    fun loadData() {
+        val weekDays = weekDaysFromMonday()
+
         viewModelScope.launch {
             tasksRepository.getTasks()
                 .onSuccess { tasks ->
-                    pendingTasksCount = tasks.size
-                    recentTasks = tasks
-                        .take(2)
-                        .map { it.title }
+                    pendingTasksCount = tasks.count { !it.completed }
+                    recentTasks = tasks.filter { !it.completed }.take(2).map { it.title }
+
+                    dailyTasks = weekDays.map { (label, date) ->
+                        val dateStr = date.format(dateFormatter)
+                        val count = tasks.count { it.completed && it.date == dateStr }
+                        DailyMetric(label, count)
+                    }
                 }
-                .onFailure {
-                    pendingTasksCount = 0
-                    recentTasks = emptyList()
+
+            pomodoroRepository.getSessions()
+                .onSuccess { sessions ->
+                    dailyPomodoros = weekDays.map { (label, date) ->
+                        val count = sessions.count { session ->
+                            val sessionDate = session.endedAt.toDate().toInstant()
+                                .atZone(ZoneId.systemDefault()).toLocalDate()
+                            session.completed && sessionDate == date
+                        }
+                        DailyMetric(label, count)
+                    }
                 }
         }
+    }
+
+    private fun weekDaysFromMonday(): List<Pair<String, LocalDate>> {
+        val dayLabels = listOf("L", "M", "X", "J", "V", "S", "D")
+        val monday = LocalDate.now().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+        return dayLabels.mapIndexed { i, label -> label to monday.plusDays(i.toLong()) }
     }
 
     private fun getFirstName(fullName: String?): String {

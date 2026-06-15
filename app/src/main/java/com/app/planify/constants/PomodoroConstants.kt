@@ -2,6 +2,7 @@ package com.app.planify.constants
 
 object PomodoroConstants {
     const val POMODORO_COLLECTION = "pomodoro"
+    const val SESSIONS_COLLECTION = "sessions"
 
     const val FIELD_COMPLETED = "completed"
     const val FIELD_CYCLE_NUMBER = "cycleNumber"
