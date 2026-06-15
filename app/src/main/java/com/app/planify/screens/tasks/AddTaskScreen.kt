@@ -1,5 +1,9 @@
 package com.app.planify.screens.tasks
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -18,6 +22,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.List
+import androidx.compose.material.icons.outlined.AddPhotoAlternate
 import androidx.compose.material.icons.outlined.ArrowBackIosNew
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.FormatListNumbered
@@ -47,10 +52,14 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -59,10 +68,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.app.planify.components.PlButton
-import com.app.planify.components.PlInput
+import coil.compose.AsyncImage
 import com.app.planify.components.PlLoader
 import com.app.planify.constants.TaskConstants
+import com.app.planify.logic.utils.ImageUtils
 import com.app.planify.screens.courses.CoursesState
 import com.app.planify.screens.courses.CoursesViewModel
 import com.app.planify.ui.theme.PlColors
@@ -71,6 +80,9 @@ import com.app.planify.ui.theme.PlTypography
 import com.mohamedrejeb.richeditor.model.rememberRichTextState
 import com.mohamedrejeb.richeditor.ui.material3.RichTextEditor
 import com.mohamedrejeb.richeditor.ui.material3.RichTextEditorDefaults
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -79,6 +91,7 @@ import java.time.format.DateTimeFormatter
 @Composable
 fun AddTaskScreen(
     taskId: String? = null,
+    initialDate: String? = null,
     viewModel: TasksViewModel = viewModel(),
     coursesViewModel: CoursesViewModel = viewModel(),
     onNavigateBack: () -> Unit
@@ -91,7 +104,7 @@ fun AddTaskScreen(
 
     LaunchedEffect(taskId) {
         if (taskId != null) viewModel.loadTaskForEdit(taskId)
-        else viewModel.prepareNewTask()
+        else viewModel.prepareNewTask(initialDate)
     }
 
     LaunchedEffect(viewModel.notes) {
@@ -115,8 +128,24 @@ fun AddTaskScreen(
                 Text(
                     text = if (isEditing) "Editar tarea" else "Nueva tarea",
                     style = PlTypography.headlineMedium,
-                    color = PlColors.TextMain
+                    color = PlColors.TextMain,
+                    maxLines = 1
                 )
+                Spacer(Modifier.weight(1f))
+                TextButton(
+                    onClick = {
+                        viewModel.onNotesChange(richTextState.toHtml())
+                        if (taskId == null) viewModel.createTask(onSuccess = onNavigateBack)
+                        else viewModel.updateTask(taskId = taskId, onSuccess = onNavigateBack)
+                    },
+                    enabled = viewModel.title.isNotBlank()
+                ) {
+                    Text(
+                        text = "Guardar",
+                        style = PlTypography.labelLarge,
+                        color = if (viewModel.title.isNotBlank()) PlColors.Primary else PlColors.TextHint
+                    )
+                }
             }
         },
         containerColor = PlColors.Background
@@ -217,24 +246,11 @@ fun AddTaskScreen(
 
             Spacer(Modifier.height(PlSpacing.lg))
 
-            FormSectionLabel("Enlace de evidencia")
+            FormSectionLabel("Evidencia")
             Spacer(Modifier.height(PlSpacing.sm))
-            PlInput(
-                value = viewModel.evidenceUrl,
-                onValueChange = viewModel::onEvidenceUrlChange,
-                label = "URL"
-            )
-
-            Spacer(Modifier.height(PlSpacing.xl))
-
-            PlButton(
-                text = if (isEditing) "Guardar cambios" else "Guardar tarea",
-                enabled = viewModel.title.isNotBlank(),
-                onClick = {
-                    viewModel.onNotesChange(richTextState.toHtml())
-                    if (taskId == null) viewModel.createTask(onSuccess = onNavigateBack)
-                    else viewModel.updateTask(taskId = taskId, onSuccess = onNavigateBack)
-                }
+            EvidencePicker(
+                imageData = viewModel.evidenceUrl,
+                onImageEncoded = viewModel::onEvidenceUrlChange
             )
 
             Spacer(Modifier.height(PlSpacing.xl))
@@ -257,6 +273,111 @@ fun AddTaskScreen(
             }
         ) {
             DatePicker(state = datePickerState)
+        }
+    }
+}
+
+@Composable
+private fun EvidencePicker(
+    imageData: String,
+    onImageEncoded: (String) -> Unit
+) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var pickedUri by remember { mutableStateOf<Uri?>(null) }
+    var isProcessing by remember { mutableStateOf(false) }
+
+    val launcher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        uri?.let {
+            pickedUri = it
+            isProcessing = true
+            scope.launch {
+                val base64 = withContext(Dispatchers.IO) { ImageUtils.uriToBase64(context, it) }
+                if (base64 != null) onImageEncoded(base64)
+                isProcessing = false
+            }
+        }
+    }
+
+    val pickImage = {
+        launcher.launch(
+            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+        )
+    }
+
+    // Imagen local apenas se selecciona; al editar, decodifica el dato guardado
+    // (URL antigua o Base64) para mostrarlo.
+    val storedModel: Any? = remember(imageData) {
+        when {
+            imageData.isBlank() -> null
+            imageData.startsWith("http") -> imageData
+            else -> ImageUtils.base64ToBytes(imageData)
+        }
+    }
+    val preview: Any? = pickedUri ?: storedModel
+    val isUploading = isProcessing
+
+    if (preview != null) {
+        Box(modifier = Modifier.fillMaxWidth()) {
+            AsyncImage(
+                model = preview,
+                contentDescription = "Evidencia",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(180.dp)
+                    .clip(RoundedCornerShape(12.dp))
+            )
+            if (isUploading) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(180.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color.Black.copy(alpha = 0.35f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    PlLoader()
+                }
+            } else {
+                TextButton(
+                    onClick = pickImage,
+                    modifier = Modifier.align(Alignment.BottomEnd)
+                ) {
+                    Text("Cambiar", color = PlColors.OnPrimary)
+                }
+            }
+        }
+    } else {
+        OutlinedCard(
+            onClick = { if (!isUploading) pickImage() },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(120.dp),
+            shape = RoundedCornerShape(12.dp),
+            colors = CardDefaults.outlinedCardColors(containerColor = PlColors.Container),
+            border = androidx.compose.foundation.BorderStroke(0.dp, Color.Transparent)
+        ) {
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.AddPhotoAlternate,
+                    contentDescription = null,
+                    tint = PlColors.Primary,
+                    modifier = Modifier.size(28.dp)
+                )
+                Spacer(Modifier.height(PlSpacing.xs))
+                Text(
+                    "Subir imagen",
+                    style = PlTypography.bodyMedium,
+                    color = PlColors.TextHint
+                )
+            }
         }
     }
 }

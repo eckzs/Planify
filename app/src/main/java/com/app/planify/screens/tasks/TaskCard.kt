@@ -17,12 +17,17 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.outlined.Edit
@@ -32,11 +37,15 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -46,24 +55,31 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.material3.Text
+import coil.compose.AsyncImage
 import com.app.planify.api.models.Task
+import com.app.planify.logic.utils.ImageUtils
 import com.app.planify.ui.theme.PlColors
 import com.app.planify.ui.theme.PlSpacing
 import com.app.planify.ui.theme.PlTypography
+import com.mohamedrejeb.richeditor.model.rememberRichTextState
 
 @Composable
 fun TasksList(
     tasks: List<Task>,
+    grouped: Boolean,
     onTaskClick: (String) -> Unit,
     onDeleteTask: (String) -> Unit,
     onPomodoroClick: (String) -> Unit,
     onToggleCompletion: (Task) -> Unit
 ) {
     var taskToDelete by remember { mutableStateOf<Task?>(null) }
+    var selectedTask by remember { mutableStateOf<Task?>(null) }
+    var showCompleted by remember { mutableStateOf(false) }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -75,15 +91,58 @@ fun TasksList(
             bottom = 80.dp
         )
     ) {
-        items(tasks, key = { it.id }) { task ->
-            TaskCard(
-                task = task,
-                onEditClick = { onTaskClick(task.id) },
-                onDeleteClick = { taskToDelete = task },
-                onPomodoroClick = onPomodoroClick,
-                onToggleCompletion = onToggleCompletion
-            )
+        if (grouped) {
+            val pending = tasks.filter { !it.completed }
+            val completed = tasks.filter { it.completed }
+
+            items(pending, key = { it.id }) { task ->
+                TaskCard(
+                    task = task,
+                    onClick = { selectedTask = task },
+                    onEditClick = { onTaskClick(task.id) },
+                    onDeleteClick = { taskToDelete = task },
+                    onPomodoroClick = onPomodoroClick,
+                    onToggleCompletion = onToggleCompletion
+                )
+            }
+
+            if (completed.isNotEmpty()) {
+                item(key = "completed-header") {
+                    CompletedToggle(
+                        count = completed.size,
+                        expanded = showCompleted,
+                        onToggle = { showCompleted = !showCompleted }
+                    )
+                }
+                if (showCompleted) {
+                    items(completed, key = { it.id }) { task ->
+                        TaskCard(
+                            task = task,
+                            onClick = { selectedTask = task },
+                            onEditClick = { onTaskClick(task.id) },
+                            onDeleteClick = { taskToDelete = task },
+                            onPomodoroClick = onPomodoroClick,
+                            onToggleCompletion = onToggleCompletion
+                        )
+                    }
+                }
+            }
+        } else {
+            items(tasks, key = { it.id }) { task ->
+                TaskCard(
+                    task = task,
+                    onClick = { selectedTask = task },
+                    onEditClick = { onTaskClick(task.id) },
+                    onDeleteClick = { taskToDelete = task },
+                    onPomodoroClick = onPomodoroClick,
+                    onToggleCompletion = onToggleCompletion
+                )
+            }
         }
+    }
+
+    selectedTask?.let { task ->
+        TaskDetailSheet(task = task, onDismiss = { selectedTask = null })
     }
 
     taskToDelete?.let { task ->
@@ -111,6 +170,7 @@ fun TasksList(
 @Composable
 fun TaskCard(
     task: Task,
+    onClick: () -> Unit,
     onEditClick: () -> Unit,
     onDeleteClick: () -> Unit,
     onPomodoroClick: (String) -> Unit,
@@ -121,6 +181,7 @@ fun TaskCard(
     var showMenu by remember { mutableStateOf(false) }
 
     Card(
+        onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(containerColor = PlColors.Surface),
@@ -266,6 +327,116 @@ private fun PlCircleCheck(
                 modifier = Modifier.size(14.dp)
             )
         }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun TaskDetailSheet(task: Task, onDismiss: () -> Unit) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val accentColor = priorityColor(task.priority)
+
+    val notesState = rememberRichTextState()
+    LaunchedEffect(task.notes) { notesState.setHtml(task.notes) }
+
+    val evidenceModel: Any? = remember(task.evidenceUrl) {
+        val data = task.evidenceUrl
+        when {
+            data.isNullOrBlank() -> null
+            data.startsWith("http") -> data
+            else -> ImageUtils.base64ToBytes(data)
+        }
+    }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = PlColors.Surface
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = PlSpacing.lg)
+                .navigationBarsPadding()
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(PlSpacing.md)
+        ) {
+            Text(
+                text = task.title,
+                style = PlTypography.headlineMedium,
+                color = PlColors.TextMain
+            )
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(PlSpacing.sm)
+            ) {
+                PriorityDot(color = accentColor)
+                Text(task.priority, style = PlTypography.labelMedium, color = accentColor)
+                if (task.date.isNotBlank()) {
+                    Text("·", style = PlTypography.labelSmall, color = PlColors.TextHint)
+                    Text(task.date, style = PlTypography.labelSmall, color = PlColors.TextHint)
+                }
+            }
+
+            if (notesState.annotatedString.text.isNotBlank()) {
+                DetailLabel("Notas")
+                Text(
+                    text = notesState.annotatedString,
+                    style = PlTypography.bodyMedium,
+                    color = PlColors.TextMain
+                )
+            }
+
+            if (evidenceModel != null) {
+                DetailLabel("Evidencia")
+                AsyncImage(
+                    model = evidenceModel,
+                    contentDescription = "Evidencia",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                )
+            }
+
+            Spacer(Modifier.height(PlSpacing.md))
+        }
+    }
+}
+
+@Composable
+private fun DetailLabel(text: String) {
+    Text(
+        text = text.uppercase(),
+        style = PlTypography.labelSmall,
+        color = PlColors.TextHint
+    )
+}
+
+@Composable
+private fun CompletedToggle(count: Int, expanded: Boolean, onToggle: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(10.dp))
+            .clickable { onToggle() }
+            .padding(vertical = PlSpacing.sm, horizontal = PlSpacing.xs),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(PlSpacing.xs)
+    ) {
+        Icon(
+            imageVector = if (expanded) Icons.Rounded.KeyboardArrowUp else Icons.Rounded.KeyboardArrowDown,
+            contentDescription = if (expanded) "Ocultar completadas" else "Mostrar completadas",
+            tint = PlColors.TextHint,
+            modifier = Modifier.size(20.dp)
+        )
+        Text(
+            text = "Completadas ($count)",
+            style = PlTypography.labelMedium,
+            color = PlColors.TextHint
+        )
     }
 }
 

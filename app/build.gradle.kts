@@ -70,6 +70,7 @@ dependencies {
     implementation(platform("com.google.firebase:firebase-bom:34.14.1"))
     implementation("com.google.firebase:firebase-auth")
     implementation("com.google.firebase:firebase-firestore")
+    implementation("io.coil-kt:coil-compose:2.7.0")
     implementation("com.google.ai.client.generativeai:generativeai:0.9.0")
     implementation(libs.androidx.credentials)
     implementation(libs.androidx.credentials.play.services.auth)

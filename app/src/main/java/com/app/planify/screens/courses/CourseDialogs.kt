@@ -13,17 +13,19 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.app.planify.components.PlInput
+import com.app.planify.ui.theme.PlColors
 import com.app.planify.ui.theme.PlSpacing
 import com.app.planify.ui.theme.PlTypography
 
 @Composable
-fun AddCourseDialog(
+fun CourseFormDialog(
     viewModel: CoursesViewModel,
     onDismiss: () -> Unit
 ) {
+    val isEditing = viewModel.editingCourseId != null
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Nuevo Curso") },
+        title = { Text(if (isEditing) "Editar Curso" else "Nuevo Curso") },
         text = {
             Column {
                 PlInput(
@@ -44,8 +46,31 @@ fun AddCourseDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = { viewModel.createCourse { onDismiss() } }) {
-                Text("Crear")
+            TextButton(onClick = { viewModel.saveCourse { onDismiss() } }) {
+                Text(if (isEditing) "Guardar" else "Crear")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancelar")
+            }
+        }
+    )
+}
+
+@Composable
+fun DeleteCourseDialog(
+    courseName: String,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Eliminar curso") },
+        text = { Text("¿Seguro que deseas eliminar \"$courseName\"? Esta acción no se puede deshacer.") },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text("Eliminar", color = PlColors.Error)
             }
         },
         dismissButton = {

@@ -5,6 +5,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.app.planify.api.models.Course
 import com.app.planify.api.services.CoursesRepository
 import kotlinx.coroutines.launch
 
@@ -21,6 +22,9 @@ class CoursesViewModel : ViewModel() {
         private set
 
     var color by mutableStateOf("#4285F4") // Color por defecto
+        private set
+
+    var editingCourseId by mutableStateOf<String?>(null)
         private set
 
     init {
@@ -48,17 +52,47 @@ class CoursesViewModel : ViewModel() {
         }
     }
 
-    fun createCourse(onSuccess: () -> Unit) {
+    fun startCreateCourse() {
+        editingCourseId = null
+        name = ""
+        teacherName = ""
+        color = "#4285F4"
+    }
+
+    fun startEditCourse(course: Course) {
+        editingCourseId = course.id
+        name = course.name
+        teacherName = course.teacherName
+        color = course.color.ifBlank { "#4285F4" }
+    }
+
+    fun saveCourse(onSuccess: () -> Unit) {
         viewModelScope.launch {
             if (name.isBlank()) return@launch
-            coursesRepository.createCourse(name, teacherName, color)
+            val courseId = editingCourseId
+            val result = if (courseId == null) {
+                coursesRepository.createCourse(name, teacherName, color)
+            } else {
+                coursesRepository.updateCourse(courseId, name, teacherName, color)
+            }
+            result
                 .onSuccess {
+                    editingCourseId = null
                     name = ""
                     teacherName = ""
+                    color = "#4285F4"
                     loadCourses()
                     onSuccess()
                 }
-                .onFailure { state = CoursesState.Error(it.message ?: "Error al crear curso") }
+                .onFailure { state = CoursesState.Error(it.message ?: "Error al guardar curso") }
+        }
+    }
+
+    fun deleteCourse(courseId: String) {
+        viewModelScope.launch {
+            coursesRepository.deleteCourse(courseId)
+                .onSuccess { loadCourses() }
+                .onFailure { state = CoursesState.Error(it.message ?: "Error al eliminar curso") }
         }
     }
 }

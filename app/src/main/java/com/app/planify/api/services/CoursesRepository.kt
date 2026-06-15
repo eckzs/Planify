@@ -73,4 +73,26 @@ class CoursesRepository constructor() {
                 continuation.resume(Result.failure(exception))
             }
     }
+
+    suspend fun updateCourse(courseId: String, name: String, teacherName: String, color: String): Result<Unit> = suspendCancellableCoroutine { continuation ->
+        val updates = mapOf(
+            CourseConstants.FIELD_NAME to name.trim(),
+            CourseConstants.TEACHER_NAME to teacherName.trim(),
+            CourseConstants.FIELD_COLOR to color
+        )
+
+        coursesCollection
+            .document(courseId)
+            .update(updates)
+            .addOnSuccessListener { continuation.resume(Result.success(Unit)) }
+            .addOnFailureListener { exception -> continuation.resume(Result.failure(exception)) }
+    }
+
+    suspend fun deleteCourse(courseId: String): Result<Unit> = suspendCancellableCoroutine { continuation ->
+        coursesCollection
+            .document(courseId)
+            .delete()
+            .addOnSuccessListener { continuation.resume(Result.success(Unit)) }
+            .addOnFailureListener { exception -> continuation.resume(Result.failure(exception)) }
+    }
 }

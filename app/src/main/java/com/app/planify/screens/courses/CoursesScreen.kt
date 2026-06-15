@@ -8,6 +8,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.app.planify.api.models.Course
 import com.app.planify.components.PlErrorMessage
 import com.app.planify.components.PlLoader
 import com.app.planify.ui.theme.PlColors
@@ -19,20 +20,30 @@ fun CoursesScreen(
     viewModel: CoursesViewModel = viewModel(),
     onNavigateToCourseDetail: (String) -> Unit = {}
 ) {
-    var showAddDialog by remember { mutableStateOf(false) }
+    var showFormDialog by remember { mutableStateOf(false) }
+    var courseToDelete by remember { mutableStateOf<Course?>(null) }
 
     Scaffold(
         topBar = {
-            Text(
-                "Mis Cursos",
-                style = PlTypography.headlineMedium,
-                color = PlColors.TextMain,
-                modifier = Modifier.padding(PlSpacing.lg)
-            )
+            Column(modifier = Modifier.padding(PlSpacing.lg)) {
+                Text(
+                    "Mis Cursos",
+                    style = PlTypography.headlineMedium,
+                    color = PlColors.TextMain
+                )
+                Text(
+                    "Toca un curso para estudiar sus flashcards",
+                    style = PlTypography.bodyMedium,
+                    color = PlColors.TextHint
+                )
+            }
         },
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { showAddDialog = true },
+                onClick = {
+                    viewModel.startCreateCourse()
+                    showFormDialog = true
+                },
                 containerColor = PlColors.Primary,
                 contentColor = PlColors.OnPrimary
             ) {
@@ -51,7 +62,12 @@ fun CoursesScreen(
                     } else {
                         CoursesList(
                             courses = state.courses,
-                            onCourseClick = onNavigateToCourseDetail
+                            onCourseClick = onNavigateToCourseDetail,
+                            onEditCourse = { course ->
+                                viewModel.startEditCourse(course)
+                                showFormDialog = true
+                            },
+                            onDeleteCourse = { course -> courseToDelete = course }
                         )
                     }
                 }
@@ -59,10 +75,21 @@ fun CoursesScreen(
         }
     }
 
-    if (showAddDialog) {
-        AddCourseDialog(
+    if (showFormDialog) {
+        CourseFormDialog(
             viewModel = viewModel,
-            onDismiss = { showAddDialog = false }
+            onDismiss = { showFormDialog = false }
+        )
+    }
+
+    courseToDelete?.let { course ->
+        DeleteCourseDialog(
+            courseName = course.name,
+            onConfirm = {
+                viewModel.deleteCourse(course.id)
+                courseToDelete = null
+            },
+            onDismiss = { courseToDelete = null }
         )
     }
 }
@@ -75,6 +102,6 @@ private fun EmptyCoursesState() {
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text("No tienes cursos creados", style = PlTypography.bodyLarge, color = PlColors.TextHint)
-        Text("Crea uno para empezar a organizar tu estudio", style = PlTypography.bodyMedium, color = PlColors.TextHint)
+        Text("Crea un curso para generar y estudiar flashcards", style = PlTypography.bodyMedium, color = PlColors.TextHint)
     }
 }
