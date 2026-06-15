@@ -49,6 +49,19 @@ fun AppNavigation() {
     val bottomBarRoutes = setOf(Routes.HOME, Routes.TASKS, Routes.COURSES, Routes.AI_CHAT, Routes.PROFILE)
     val showBottomBar = currentRoute in bottomBarRoutes
 
+    // Navega a una pestaña principal con las MISMAS opciones que el bottom bar,
+    // para que el estado del back stack quede consistente entre atajos y barra.
+    val navigateToTab: (String) -> Unit = { route ->
+        navController.navigate(route) {
+            popUpTo(Routes.HOME) {
+                inclusive = false
+                saveState = true
+            }
+            launchSingleTop = true
+            restoreState = true
+        }
+    }
+
     LaunchedEffect(emailLinkState) {
         when (val state = emailLinkState) {
             is EmailLinkState.Success -> {
@@ -106,8 +119,10 @@ fun AppNavigation() {
 
             composable(Routes.HOME) {
                 HomeScreen(
-                    onNavigateToTasks    = { navController.navigate(Routes.TASKS) },
-                    onNavigateToPomodoro = { navController.navigate(Routes.POMODORO) }
+                    onNavigateToTasks    = { navigateToTab(Routes.TASKS) },
+                    onNavigateToPomodoro = { navController.navigate(Routes.POMODORO) },
+                    onNavigateToCourses  = { navigateToTab(Routes.COURSES) },
+                    onNavigateToAi       = { navigateToTab(Routes.AI_CHAT) }
                 )
             }
 

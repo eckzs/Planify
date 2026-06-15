@@ -8,14 +8,20 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.MenuBook
+import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Timer
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import com.app.planify.components.PlCard
 import com.app.planify.ui.theme.PlColors
@@ -23,8 +29,8 @@ import com.app.planify.ui.theme.PlSpacing
 import com.app.planify.ui.theme.PlTypography
 
 @Composable
-fun PendingTasksCard(count: Int) {
-    PlCard(modifier = Modifier.fillMaxWidth()) {
+fun PendingTasksCard(count: Int, onClick: () -> Unit = {}) {
+    PlCard(modifier = Modifier.fillMaxWidth(), onClick = onClick) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -46,8 +52,8 @@ fun PendingTasksCard(count: Int) {
 }
 
 @Composable
-fun RecentTasksCard(tasks: List<String>) {
-    PlCard(modifier = Modifier.fillMaxWidth()) {
+fun RecentTasksCard(tasks: List<String>, onClick: () -> Unit = {}) {
+    PlCard(modifier = Modifier.fillMaxWidth(), onClick = onClick) {
         Text("Recientes", style = PlTypography.labelMedium, color = PlColors.TextHint)
         Spacer(Modifier.height(PlSpacing.sm))
         if (tasks.isEmpty()) {
@@ -75,33 +81,74 @@ fun RecentTasksCard(tasks: List<String>) {
 }
 
 @Composable
-fun QuickAccessRow(
-    onNavigateToTasks: () -> Unit,
-    onNavigateToPomodoro: () -> Unit
-) {
-    Row(
+fun AiCtaCard(onClick: () -> Unit) {
+    Card(
+        onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(PlSpacing.md)
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = PlColors.Primary),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
-        PlCard(
-            modifier = Modifier.weight(1f),
-            onClick = onNavigateToTasks
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(PlSpacing.md),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(PlSpacing.md)
         ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
-                Icon(Icons.Outlined.CheckCircle, contentDescription = null, tint = PlColors.Primary, modifier = Modifier.size(32.dp))
-                Spacer(Modifier.height(PlSpacing.xs))
-                Text("Tareas", style = PlTypography.labelMedium, color = PlColors.TextMain)
+            Icon(
+                imageVector = Icons.Outlined.AutoAwesome,
+                contentDescription = null,
+                tint = PlColors.OnPrimary,
+                modifier = Modifier.size(32.dp)
+            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text("Asistente IA", style = PlTypography.titleMedium, color = PlColors.OnPrimary)
+                Text(
+                    "Pregúntame o genera flashcards al instante",
+                    style = PlTypography.bodyMedium,
+                    color = PlColors.OnPrimary
+                )
             }
         }
-        PlCard(
-            modifier = Modifier.weight(1f),
-            onClick = onNavigateToPomodoro
+    }
+}
+
+@Composable
+fun QuickAccessRow(
+    onNavigateToTasks: () -> Unit,
+    onNavigateToPomodoro: () -> Unit,
+    onNavigateToCourses: () -> Unit,
+    onNavigateToAi: () -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(PlSpacing.md)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(PlSpacing.md)
         ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
-                Icon(Icons.Outlined.Timer, contentDescription = null, tint = PlColors.Primary, modifier = Modifier.size(32.dp))
-                Spacer(Modifier.height(PlSpacing.xs))
-                Text("Pomodoro", style = PlTypography.labelMedium, color = PlColors.TextMain)
-            }
+            QuickAccessCard("Tareas", Icons.Outlined.CheckCircle, onNavigateToTasks, Modifier.weight(1f))
+            QuickAccessCard("Pomodoro", Icons.Outlined.Timer, onNavigateToPomodoro, Modifier.weight(1f))
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(PlSpacing.md)
+        ) {
+            QuickAccessCard("Cursos", Icons.AutoMirrored.Outlined.MenuBook, onNavigateToCourses, Modifier.weight(1f))
+            QuickAccessCard("Asistente", Icons.Outlined.AutoAwesome, onNavigateToAi, Modifier.weight(1f))
+        }
+    }
+}
+
+@Composable
+private fun QuickAccessCard(
+    label: String,
+    icon: ImageVector,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    PlCard(modifier = modifier, onClick = onClick) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+            Icon(icon, contentDescription = null, tint = PlColors.Primary, modifier = Modifier.size(32.dp))
+            Spacer(Modifier.height(PlSpacing.xs))
+            Text(label, style = PlTypography.labelMedium, color = PlColors.TextMain)
         }
     }
 }

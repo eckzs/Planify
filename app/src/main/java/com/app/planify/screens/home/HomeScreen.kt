@@ -25,7 +25,9 @@ import com.app.planify.ui.theme.PlTypography
 fun HomeScreen(
     viewModel: HomeViewModel = viewModel(),
     onNavigateToTasks: () -> Unit = {},
-    onNavigateToPomodoro: () -> Unit = {}
+    onNavigateToPomodoro: () -> Unit = {},
+    onNavigateToCourses: () -> Unit = {},
+    onNavigateToAi: () -> Unit = {}
 ) {
     LaunchedEffect(Unit) {
         viewModel.loadData()
@@ -70,16 +72,21 @@ fun HomeScreen(
 
         Spacer(Modifier.height(PlSpacing.lg))
 
-        PendingTasksCard(count = viewModel.pendingTasksCount)
+        PendingTasksCard(count = viewModel.pendingTasksCount, onClick = onNavigateToTasks)
         Spacer(Modifier.height(PlSpacing.md))
-        RecentTasksCard(tasks = viewModel.recentTasks)
+        RecentTasksCard(tasks = viewModel.recentTasks, onClick = onNavigateToTasks)
+
+        Spacer(Modifier.height(PlSpacing.lg))
+        AiCtaCard(onClick = onNavigateToAi)
 
         Spacer(Modifier.height(PlSpacing.lg))
         Text("Acceso rápido", style = PlTypography.titleMedium, color = PlColors.TextMain)
         Spacer(Modifier.height(PlSpacing.sm))
         QuickAccessRow(
             onNavigateToTasks = onNavigateToTasks,
-            onNavigateToPomodoro = onNavigateToPomodoro
+            onNavigateToPomodoro = onNavigateToPomodoro,
+            onNavigateToCourses = onNavigateToCourses,
+            onNavigateToAi = onNavigateToAi
         )
         Spacer(Modifier.height(PlSpacing.xl))
     }
