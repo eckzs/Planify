@@ -34,7 +34,7 @@ import java.time.LocalDate
 @Composable
 fun TasksScreen(
     viewModel: TasksViewModel = viewModel(),
-    onNavigateToAdd: () -> Unit = {},
+    onNavigateToAdd: (String) -> Unit = {},
     onNavigateToEdit: (String) -> Unit = {},
     onNavigateToPomodoro: (String) -> Unit = {}
 ) {
@@ -59,6 +59,7 @@ fun TasksScreen(
                 is TasksState.Error   -> PlErrorMessage(state.message)
                 is TasksState.Success -> TasksList(
                     tasks = state.tasks,
+                    grouped = viewModel.showAllTasks,
                     onTaskClick = onNavigateToEdit,
                     onDeleteTask = viewModel::deleteTask,
                     onPomodoroClick = { taskId ->
@@ -74,7 +75,7 @@ fun TasksScreen(
         }
 
         PlFab(
-            onClick = onNavigateToAdd,
+            onClick = { onNavigateToAdd(viewModel.selectedDateFormatted) },
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .padding(PlSpacing.lg)

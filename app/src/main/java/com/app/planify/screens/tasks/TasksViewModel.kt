@@ -47,6 +47,9 @@ class TasksViewModel : ViewModel() {
     var showAllTasks by mutableStateOf(false)
         private set
 
+    val selectedDateFormatted: String
+        get() = selectedDate.format(dateFormatter)
+
     val dates: List<LocalDate> = run {
         val startOfYear = LocalDate.now().withDayOfYear(1)
         val endOfYear = LocalDate.now().withDayOfYear(LocalDate.now().lengthOfYear())
@@ -201,9 +204,9 @@ class TasksViewModel : ViewModel() {
         }
     }
 
-    fun prepareNewTask() {
+    fun prepareNewTask(initialDate: String? = null) {
         clearForm()
-        date = selectedDate.format(dateFormatter)
+        date = initialDate?.takeIf { it.isNotBlank() } ?: selectedDate.format(dateFormatter)
     }
 
     private fun clearForm() {

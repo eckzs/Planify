@@ -154,13 +154,6 @@ private fun EmptyChat(modifier: Modifier = Modifier) {
             color = PlColors.TextHint,
             textAlign = TextAlign.Center
         )
-        Spacer(Modifier.height(PlSpacing.sm))
-        Text(
-            "O usa el chip ✨ para generar flashcards directamente",
-            style = PlTypography.labelMedium,
-            color = PlColors.TextHint,
-            textAlign = TextAlign.Center
-        )
     }
 }
 

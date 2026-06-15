@@ -139,8 +139,8 @@ fun AppNavigation() {
 
                 TasksScreen(
                     viewModel = tasksViewModel,
-                    onNavigateToAdd = {
-                        navController.navigate(Routes.ADD_TASK)
+                    onNavigateToAdd = { date ->
+                        navController.navigate(Routes.addTask(date))
                     },
                     onNavigateToEdit = { taskId ->
                         navController.navigate(Routes.taskDetail(taskId))
@@ -151,8 +151,13 @@ fun AppNavigation() {
                 )
             }
 
-            composable(Routes.ADD_TASK) {
+            composable(
+                route = Routes.ADD_TASK,
+                arguments = listOf(navArgument("date") { type = NavType.StringType; defaultValue = "" })
+            ) { backStack ->
+                val initialDate = android.net.Uri.decode(backStack.arguments?.getString("date") ?: "")
                 AddTaskScreen(
+                    initialDate = initialDate,
                     onNavigateBack = {
                         navController.previousBackStackEntry
                             ?.savedStateHandle?.set("task_changed", true)

@@ -62,4 +62,25 @@ class FlashcardsRepository constructor() {
             .addOnSuccessListener { continuation.resume(Result.success(Unit)) }
             .addOnFailureListener { exception -> continuation.resume(Result.failure(exception)) }
     }
+
+    suspend fun updateCardContent(cardId: String, front: String, back: String): Result<Unit> = suspendCancellableCoroutine { continuation ->
+        val updates = mapOf(
+            FlashcardConstants.FIELD_FRONT to front.trim(),
+            FlashcardConstants.FIELD_BACK to back.trim()
+        )
+
+        flashcardsCollection
+            .document(cardId)
+            .update(updates)
+            .addOnSuccessListener { continuation.resume(Result.success(Unit)) }
+            .addOnFailureListener { exception -> continuation.resume(Result.failure(exception)) }
+    }
+
+    suspend fun deleteCard(cardId: String): Result<Unit> = suspendCancellableCoroutine { continuation ->
+        flashcardsCollection
+            .document(cardId)
+            .delete()
+            .addOnSuccessListener { continuation.resume(Result.success(Unit)) }
+            .addOnFailureListener { exception -> continuation.resume(Result.failure(exception)) }
+    }
 }
